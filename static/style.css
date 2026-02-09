@@ -1,0 +1,200 @@
+/* === Minimal custom styles — only what Tailwind can't do === */
+
+/* Score glow on big moments */
+.score-glow {
+    transition: text-shadow 0.4s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.score-glow.flash {
+    text-shadow: 0 0 40px rgba(16, 185, 129, 0.5);
+}
+
+/* Feed scrollbar */
+.feed-scroll::-webkit-scrollbar { width: 3px; }
+.feed-scroll::-webkit-scrollbar-track { background: transparent; }
+.feed-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+.feed-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+/* Ball dots */
+.ball-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.ball-dot.runs-0 { background: rgba(255,255,255,0.04); color: #525252; }
+.ball-dot.runs-1,
+.ball-dot.runs-2,
+.ball-dot.runs-3 { background: rgba(59,130,246,0.12); color: #60a5fa; }
+.ball-dot.runs-4 { background: rgba(16,185,129,0.15); color: #34d399; }
+.ball-dot.runs-6 { background: rgba(139,92,246,0.15); color: #a78bfa; }
+.ball-dot.wicket { background: rgba(239,68,68,0.15); color: #f87171; }
+.ball-dot.extra  { background: rgba(251,146,60,0.12); color: #fb923c; }
+
+/* Commentary feed items */
+.feed-item {
+    padding: 12px 16px;
+    border-radius: 8px;
+    border-left: 3px solid transparent;
+    transition: background 0.15s ease;
+    animation: feedIn 0.3s ease-out;
+}
+
+.feed-item + .feed-item {
+    margin-top: 2px;
+}
+
+@keyframes feedIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.feed-item:hover { background: rgba(255,255,255,0.03); }
+
+.feed-item.feed-placeholder { background: none; border: none; animation: none; }
+.feed-item.feed-placeholder:hover { background: none; }
+
+.feed-item .feed-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.feed-item .feed-over {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #525252;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.feed-item .feed-badge {
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.feed-item .feed-text {
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: #d4d4d4;
+}
+
+.feed-item .feed-score {
+    font-size: 0.75rem;
+    color: #525252;
+    margin-top: 6px;
+    font-weight: 500;
+}
+
+/* Branch colors — subtle left border + badge */
+.branch-routine            { border-left-color: #404040; }
+.branch-boundary_momentum  { border-left-color: #10b981; }
+.branch-wicket_drama       { border-left-color: #ef4444; }
+.branch-pressure_builder   { border-left-color: #f59e0b; }
+.branch-over_transition    { border-left-color: #3b82f6; }
+.branch-extra_gift         { border-left-color: #f97316; }
+
+.badge-routine            { background: rgba(255,255,255,0.05); color: #737373; }
+.badge-boundary_momentum  { background: rgba(16,185,129,0.12); color: #34d399; }
+.badge-wicket_drama       { background: rgba(239,68,68,0.12); color: #f87171; }
+.badge-pressure_builder   { background: rgba(245,158,11,0.12); color: #fbbf24; }
+.badge-over_transition    { background: rgba(59,130,246,0.12); color: #60a5fa; }
+.badge-extra_gift         { background: rgba(249,115,22,0.12); color: #fb923c; }
+
+.feed-item.pivot {
+    border-left-width: 4px;
+    background: rgba(139,92,246,0.05);
+}
+
+/* Narrative moments */
+.feed-narrative { border-left-color: #8b5cf6; }
+.feed-narrative.narrative-first_innings_start,
+.feed-narrative.narrative-second_innings_start { border-left-color: #3b82f6; }
+.feed-narrative.narrative-first_innings_end    { border-left-color: #f97316; }
+.feed-narrative.narrative-match_result         { border-left-color: #eab308; }
+.feed-narrative.narrative-milestone            { border-left-color: #eab308; }
+.feed-narrative.narrative-new_batsman          { border-left-color: #ef4444; }
+.feed-narrative .feed-text { font-style: italic; color: #e5e5e5; }
+
+.badge-narrative {
+    background: rgba(139,92,246,0.15);
+    color: #a78bfa;
+    font-size: 0.6rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+/* Recent over items */
+.recent-over-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+.recent-over-item:hover { background: rgba(255,255,255,0.04); }
+.recent-over-num  { font-size: 0.75rem; color: #525252; font-weight: 600; }
+.recent-over-runs { font-size: 0.85rem; font-weight: 700; color: #d4d4d4; font-family: 'JetBrains Mono', monospace; }
+
+/* Match end overlay */
+.match-end-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(20px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.match-end-card {
+    background: #171717;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 48px 64px;
+    text-align: center;
+    animation: cardIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes cardIn {
+    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.match-end-card h2 {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #fafafa;
+    margin-bottom: 8px;
+}
+
+.match-end-card p {
+    font-size: 1rem;
+    color: #737373;
+    margin-bottom: 6px;
+}
+
+/* Audio toggle peer fix (Tailwind peer needs direct sibling) */
+.peer:checked ~ .peer-checked\:bg-emerald-500 { background-color: #10b981; }
+.peer:checked ~ div > .peer-checked\:translate-x-3 { transform: translateX(12px); }
+.peer:checked ~ div > .peer-checked\:bg-white { background-color: white; }
+
+@media (max-width: 768px) {
+    .match-end-card { padding: 32px; }
+    .match-end-card h2 { font-size: 1.5rem; }
+}
