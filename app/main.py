@@ -13,6 +13,7 @@ from app.feed.mock_feed import load_match_data
 from app.engine.state_manager import StateManager
 from app.engine.logic_engine import LogicEngine
 from app.commentary.generator import generate_commentary, generate_narrative
+from app.commentary.prompts import strip_audio_tags
 from app.audio.tts import synthesize_speech
 from app.models import NarrativeBranch, SUPPORTED_LANGUAGES
 
@@ -157,15 +158,18 @@ async def _broadcast_narrative(
     if not text:
         return
 
-    # TTS for narrative moments
+    # TTS gets the raw text (may include audio tags for ElevenLabs v3)
     try:
         audio_b64 = await synthesize_speech(text, branch, is_pivot=False, language=language)
     except Exception as e:
         logger.error(f"Narrative TTS failed ({moment_type}): {e}")
         audio_b64 = None
 
+    # Strip audio tags for display and history
+    display_text = strip_audio_tags(text)
+
     await broadcast("commentary", {
-        "text": text,
+        "text": display_text,
         "audio_base64": audio_b64,
         "branch": branch.value,
         "is_pivot": False,
@@ -173,13 +177,13 @@ async def _broadcast_narrative(
         "narrative_type": moment_type,
     })
 
-    # Add to commentary history so ball commentary knows what was just said
+    # Add clean text to history so LLM doesn't see/repeat its own tags
     if state is not None:
-        state.commentary_history.append(text)
+        state.commentary_history.append(display_text)
         if len(state.commentary_history) > 6:
             state.commentary_history.pop(0)
 
-    logger.info(f"[NARRATIVE:{moment_type}] {text}")
+    logger.info(f"[NARRATIVE:{moment_type}] {display_text}")
 
 
 async def _run_match(start_over: int = 1, language: str = "en"):
@@ -358,7 +362,7 @@ async def _run_match(start_over: int = 1, language: str = "en"):
             logger.error(f"Commentary generation failed: {e}")
             commentary_text = f"{ball.batsman} — {ball.runs} run(s)."
 
-        # 5. Synthesize audio
+        # 5. Synthesize audio (raw text with audio tags goes to TTS)
         try:
             audio_b64 = await synthesize_speech(
                 commentary_text,
@@ -370,9 +374,12 @@ async def _run_match(start_over: int = 1, language: str = "en"):
             logger.error(f"TTS failed: {e}")
             audio_b64 = None
 
-        # 6. Broadcast ball commentary
+        # 6. Strip audio tags for display and history
+        display_text = strip_audio_tags(commentary_text)
+
+        # 7. Broadcast ball commentary (clean text for UI)
         commentary_data = {
-            "text": commentary_text,
+            "text": display_text,
             "audio_base64": audio_b64,
             "branch": logic_result.branch.value,
             "is_pivot": logic_result.is_pivot,
@@ -384,16 +391,16 @@ async def _run_match(start_over: int = 1, language: str = "en"):
         }
         await broadcast("commentary", commentary_data)
 
-        # 7. Update commentary history
-        state.last_commentary = commentary_text
-        state.commentary_history.append(commentary_text)
+        # 8. Update commentary history (clean text so LLM doesn't see its own tags)
+        state.last_commentary = display_text
+        state.commentary_history.append(display_text)
         if len(state.commentary_history) > 6:
             state.commentary_history.pop(0)
 
         logger.info(
             f"[{state.overs_display}] {ball.batsman}: {ball.runs}{'W' if ball.is_wicket else ''} "
             f"| {state.total_runs}/{state.wickets} | {logic_result.branch.value} "
-            f"| {commentary_text}"
+            f"| {display_text}"
         )
 
         # ============================================================ #

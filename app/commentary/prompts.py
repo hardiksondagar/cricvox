@@ -1,4 +1,91 @@
+import re
+
+from app.config import settings
 from app.models import SUPPORTED_LANGUAGES
+
+
+# =========================================================================== #
+#  ElevenLabs v3 Audio Tags — LLM prompt instructions
+# =========================================================================== #
+# When TTS provider is ElevenLabs, we instruct the LLM to embed audio tags
+# directly in its output. The v3 model interprets these as performance cues
+# for expressive, dramatic delivery. Tags are stripped before display/history.
+
+_AUDIO_TAG_INSTRUCTIONS = """
+=== VOICE EXPRESSION (AUDIO TAGS + TEXT FORMATTING) ===
+
+Your commentary will be spoken aloud by a text-to-speech engine.
+You have TWO tools to make it expressive:
+
+1. AUDIO TAGS — bracketed cues that direct HOW the voice sounds (not spoken aloud).
+2. TEXT FORMATTING — ALL CAPS, ellipses (…), and dashes (—) that the voice engine
+   interprets for emphasis, pauses, and pacing.
+
+--- AUDIO TAGS ---
+Place a tag BEFORE the words it should affect.
+
+- [excited] — energy, enthusiasm
+- [shouts] — peak volume (sixes, match-winning moments only)
+- [gasps] — sharp breath, shock (wickets, stunning moments)
+- [tense] — anxious, tight (pressure, death overs)
+- [hushed] — quiet intensity (building anticipation)
+- [whispers] — soft, conspiratorial (suspense before a big ball)
+- [dramatic tone] — gravity, importance (pivotal moments)
+- [passionately] — heartfelt emotion (milestones, match results)
+- [thoughtfully] — reflective, analytical (over summaries)
+- [laughs] — joy, disbelief (unbelievable moments)
+- [pause] — beat of silence (before a reveal or after shock)
+
+--- TEXT FORMATTING ---
+The voice engine reads these formatting cues naturally:
+
+- ALL CAPS = spoken with STRONG emphasis ("That is OUT!" vs "That is out!")
+- Ellipsis (…) = dramatic pause, hesitation ("And… it's gone!")
+- Dash (—) = sharp break, shift in thought ("He swings — and misses!")
+- Exclamation (!) = energy boost
+- Repeated letters = drawn out delivery ("GOOONE!" sounds elongated)
+
+--- EXAMPLES ---
+  Wicket:    "[gasps] OUT! [excited] Bowled him! The stumps are SHATTERED!"
+  Wicket 2:  "[gasps] CAUGHT! [dramatic tone] The set batsman… is GONE."
+  Six:       "[shouts] SIX! That is MASSIVE!"
+  Four:      "[excited] FOUR! He's timing it beautifully now!"
+  Pressure:  "[tense] Dot ball. [hushed] Four in a row… the squeeze is on."
+  Milestone: "[passionately] FIFTY! What an innings… take a bow!"
+  Over end:  "[thoughtfully] End of the over — just 3 off it. Outstanding."
+  Result:    "[shouts] [passionately] India WIN! WHAT… A… MATCH!"
+  Death:     "[tense] Need 14 off 6… [hushed] here we go."
+  Routine:   "Single taken." (no tags, no caps — natural voice)
+
+--- RULES ---
+- Use 1-2 tags per line. Only the biggest moments (match result, century) get 2-3.
+- Most routine balls (singles, dots, twos) need ZERO tags — just natural text.
+- Pick the ONE tag that best fits — don't stack every tag you know.
+- Use ALL CAPS only on 1-2 key words per line (OUT, SIX, FOUR, GONE, WIN) — not whole sentences.
+- Use ellipsis (…) for ONE dramatic pause per line at most.
+- A pivot moment (Pivot: YES) should get [dramatic tone].
+"""
+
+# Regex to strip audio tags from text for display / commentary history.
+# Matches all v3 audio tags referenced in _AUDIO_TAG_INSTRUCTIONS.
+_AUDIO_TAG_RE = re.compile(
+    r"\[(?:"
+    r"excited|shouts|gasps|tense|hushed|whispers|"
+    r"dramatic tone|passionately|thoughtfully|laughs|pause"
+    r")\]\s*",
+    re.IGNORECASE,
+)
+
+
+def strip_audio_tags(text: str) -> str:
+    """Remove ElevenLabs v3 audio tags from text for display and history."""
+    return _AUDIO_TAG_RE.sub("", text).strip()
+
+
+def _is_elevenlabs_provider() -> bool:
+    """Check if the configured TTS provider is ElevenLabs."""
+    return settings.tts_provider.lower().strip() == "elevenlabs"
+
 
 _BASE_SYSTEM_PROMPT = """You are a professional TV cricket commentator. Think Harsha Bhogle — analytical, conversational, knows the game inside out.
 
@@ -305,12 +392,20 @@ SYSTEM_PROMPT = _BASE_SYSTEM_PROMPT
 
 
 def get_system_prompt(language: str = "en") -> str:
-    """Return the ball-by-ball system prompt, with language instruction prepended if non-English."""
+    """Return the ball-by-ball system prompt.
+
+    - Prepends language instruction if non-English.
+    - Appends ElevenLabs v3 audio tag instructions when provider is elevenlabs.
+    """
     lang_cfg = SUPPORTED_LANGUAGES.get(language, SUPPORTED_LANGUAGES["en"])
     instruction = lang_cfg.get("llm_instruction", "")
+
+    prompt = _BASE_SYSTEM_PROMPT
     if instruction:
-        return f"{instruction}\n\n{_BASE_SYSTEM_PROMPT}"
-    return _BASE_SYSTEM_PROMPT
+        prompt = f"{instruction}\n\n{prompt}"
+    if _is_elevenlabs_provider():
+        prompt = f"{prompt}\n{_AUDIO_TAG_INSTRUCTIONS}"
+    return prompt
 
 
 USER_PROMPT_TEMPLATE = """{batting_team} {runs}/{wickets} ({overs} ov) | Target: {target} | Need {runs_needed} off {balls_remaining}
@@ -451,12 +546,20 @@ NARRATIVE_SYSTEM_PROMPT = _BASE_NARRATIVE_SYSTEM_PROMPT
 
 
 def get_narrative_system_prompt(language: str = "en") -> str:
-    """Return the narrative system prompt, with language instruction prepended if non-English."""
+    """Return the narrative system prompt.
+
+    - Prepends language instruction if non-English.
+    - Appends ElevenLabs v3 audio tag instructions when provider is elevenlabs.
+    """
     lang_cfg = SUPPORTED_LANGUAGES.get(language, SUPPORTED_LANGUAGES["en"])
     instruction = lang_cfg.get("llm_instruction", "")
+
+    prompt = _BASE_NARRATIVE_SYSTEM_PROMPT
     if instruction:
-        return f"{instruction}\n\n{_BASE_NARRATIVE_SYSTEM_PROMPT}"
-    return _BASE_NARRATIVE_SYSTEM_PROMPT
+        prompt = f"{instruction}\n\n{prompt}"
+    if _is_elevenlabs_provider():
+        prompt = f"{prompt}\n{_AUDIO_TAG_INSTRUCTIONS}"
+    return prompt
 
 NARRATIVE_PROMPTS = {
     # ------------------------------------------------------------------ #

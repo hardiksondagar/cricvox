@@ -16,13 +16,14 @@ logger = logging.getLogger(__name__)
 # Lazy-initialized client
 _client: AsyncOpenAI | None = None
 
+# Token budgets for max_completion_tokens.
+# Sized to accommodate audio tags (e.g. [excited], [gasps]) which the LLM
+# embeds for ElevenLabs v3 TTS — these add ~15-25 tokens on dramatic balls.
 # Indic scripts use 2-3x more tokens per word than Latin scripts.
-# Scale max_completion_tokens for non-English to avoid truncation
-# or the model switching to English to fit the budget.
-_BALL_TOKENS_EN = 80
-_BALL_TOKENS_INDIC = 200
-_NARRATIVE_TOKENS_EN = 120
-_NARRATIVE_TOKENS_INDIC = 300
+_BALL_TOKENS_EN = 120
+_BALL_TOKENS_INDIC = 260
+_NARRATIVE_TOKENS_EN = 200
+_NARRATIVE_TOKENS_INDIC = 400
 
 
 def _max_tokens(base_en: int, base_indic: int, language: str) -> int:
@@ -61,7 +62,7 @@ async def generate_commentary(
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.5,
+            temperature=0.9,
             max_completion_tokens=max_tokens,
         )
         commentary = response.choices[0].message.content.strip()
@@ -102,7 +103,7 @@ async def generate_narrative(
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.5,
+            temperature=0.9,
             max_completion_tokens=max_tokens,
         )
         commentary = response.choices[0].message.content.strip()
