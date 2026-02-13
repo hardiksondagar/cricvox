@@ -38,6 +38,24 @@ logger = logging.getLogger(__name__)
 
 def _build_score_data(state, ball: BallEvent, logic_result) -> dict:
     """Build the language-independent score update data."""
+    # Striker stats
+    striker_stats = None
+    if state.current_batsman and state.current_batsman in state.batsmen:
+        bs = state.batsmen[state.current_batsman]
+        striker_stats = {"name": bs.name, "runs": bs.runs, "balls": bs.balls_faced, "fours": bs.fours, "sixes": bs.sixes, "sr": round(bs.strike_rate, 1)}
+
+    # Non-striker stats
+    non_striker_stats = None
+    if state.non_striker and state.non_striker in state.batsmen:
+        bs = state.batsmen[state.non_striker]
+        non_striker_stats = {"name": bs.name, "runs": bs.runs, "balls": bs.balls_faced, "fours": bs.fours, "sixes": bs.sixes, "sr": round(bs.strike_rate, 1)}
+
+    # Current bowler stats
+    bowler_stats = None
+    if ball.bowler and ball.bowler in state.bowlers:
+        bw = state.bowlers[ball.bowler]
+        bowler_stats = {"name": bw.name, "overs": bw.overs_display, "runs": bw.runs_conceded, "wickets": bw.wickets, "econ": round(bw.economy, 1)}
+
     return {
         "total_runs": state.total_runs,
         "wickets": state.wickets,
@@ -58,6 +76,9 @@ def _build_score_data(state, ball: BallEvent, logic_result) -> dict:
         "is_six": ball.is_six,
         "branch": logic_result.branch.value,
         "is_pivot": logic_result.is_pivot,
+        "striker": striker_stats,
+        "non_striker": non_striker_stats,
+        "bowler_stats": bowler_stats,
     }
 
 
@@ -322,6 +343,48 @@ async def precompute_match_context(match_id: int) -> int:
 
 
 # ------------------------------------------------------------------ #
+#  Migrate existing commentary score_update data
+# ------------------------------------------------------------------ #
+
+async def migrate_score_updates() -> int:
+    """
+    Copy updated score_data from match_balls.context into
+    match_commentaries.data for all score_update events.
+    Returns number of rows updated.
+    """
+    from app.storage.database import _get_db
+    db = _get_db()
+
+    # Fetch all score_update commentaries that have a ball_id
+    async with db.execute(
+        """SELECT c.id, b.context
+           FROM match_commentaries c
+           JOIN match_balls b ON c.ball_id = b.id
+           WHERE c.event_type = 'score_update' AND b.context IS NOT NULL"""
+    ) as cur:
+        rows = await cur.fetchall()
+
+    updated = 0
+    batch = []
+    for row in rows:
+        ctx = json.loads(row["context"])
+        score_data = ctx.get("score_data")
+        if score_data:
+            batch.append((json.dumps(score_data, default=str), row["id"]))
+
+    if batch:
+        await db.executemany(
+            "UPDATE match_commentaries SET data = ? WHERE id = ?",
+            batch,
+        )
+        await db.commit()
+        updated = len(batch)
+
+    logger.info(f"Migrated {updated} score_update commentary rows")
+    return updated
+
+
+# ------------------------------------------------------------------ #
 #  CLI entry point
 # ------------------------------------------------------------------ #
 
@@ -330,11 +393,18 @@ async def _main():
         print("Usage:")
         print("  python -m app.precompute <match_id>   # one match")
         print("  python -m app.precompute --all         # all matches")
+        print("  python -m app.precompute --migrate     # recompute all + update commentaries")
         sys.exit(1)
 
     await init_db()
     try:
-        if sys.argv[1] == "--all":
+        if sys.argv[1] == "--migrate":
+            # Re-precompute all matches, then migrate commentary data
+            matches = await list_matches()
+            for m in matches:
+                await precompute_match_context(m["match_id"])
+            await migrate_score_updates()
+        elif sys.argv[1] == "--all":
             matches = await list_matches()
             for m in matches:
                 await precompute_match_context(m["match_id"])

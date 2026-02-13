@@ -143,12 +143,24 @@
             <div class="flex-1 flex items-center gap-6 px-5 py-3 rounded-lg bg-white/[0.03] border border-white/5">
                 <div class="flex-1">
                     <div class="text-[10px] text-neutral-600 uppercase tracking-wider font-semibold">Batting</div>
-                    <div id="currentBatsman" class="text-sm font-bold text-white truncate mt-0.5">--</div>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                        <span class="text-emerald-400 text-xs">*</span>
+                        <span id="strikerName" class="text-sm font-bold text-white truncate">--</span>
+                        <span class="text-xs font-mono tabular-nums text-neutral-400"><span id="strikerRuns" class="text-white font-bold">0</span>(<span id="strikerBalls">0</span>)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                        <span class="text-neutral-700 text-xs">&nbsp;</span>
+                        <span id="nonStrikerName" class="text-sm font-medium text-neutral-500 truncate">--</span>
+                        <span class="text-xs font-mono tabular-nums text-neutral-600"><span id="nonStrikerRuns" class="text-neutral-400 font-bold">0</span>(<span id="nonStrikerBalls">0</span>)</span>
+                    </div>
                 </div>
                 <div class="w-px h-8 bg-white/5"></div>
                 <div class="flex-1">
                     <div class="text-[10px] text-neutral-600 uppercase tracking-wider font-semibold">Bowling</div>
-                    <div id="currentBowler" class="text-sm font-bold text-white truncate mt-0.5">--</div>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                        <span id="currentBowler" class="text-sm font-bold text-white truncate">--</span>
+                        <span class="text-xs font-mono tabular-nums text-neutral-400"><span id="bowlerWickets" class="text-emerald-400 font-bold">0</span>/<span id="bowlerRuns">0</span></span>
+                    </div>
                 </div>
             </div>
 
@@ -163,92 +175,27 @@
             </div>
         </section>
 
-        <!-- Main Content -->
-        <div class="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
-
-            <!-- Commentary Feed -->
-            <section>
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-xs text-neutral-500 uppercase tracking-wider font-bold">Commentary</h2>
+        <!-- Commentary Feed -->
+        <section>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xs text-neutral-500 uppercase tracking-wider font-bold">Commentary</h2>
+            </div>
+            <div id="commentaryFeed" class="max-h-[calc(100vh-420px)] overflow-y-auto feed-scroll">
+                <div class="feed-item feed-placeholder py-20 text-center">
+                    <p class="text-sm text-neutral-600">Loading commentary...</p>
                 </div>
-                <div id="commentaryFeed" class="max-h-[calc(100vh-420px)] overflow-y-auto feed-scroll">
-                    <div class="feed-item feed-placeholder py-20 text-center">
-                        <p class="text-sm text-neutral-600">Loading commentary...</p>
-                    </div>
-                </div>
-            </section>
+            </div>
+        </section>
 
-            <!-- Sidebar Stats -->
-            <aside class="space-y-4">
-
-                <!-- Run Rate Bars -->
-                <div class="p-4 rounded-lg bg-white/[0.03] border border-white/5">
-                    <h3 class="text-[10px] text-neutral-600 uppercase tracking-wider font-bold mb-3">Run Rate</h3>
-                    <div class="space-y-3">
-                        <div>
-                            <div class="flex justify-between text-[11px] mb-1">
-                                <span class="text-neutral-500">Current</span>
-                                <span id="crrBarValue" class="font-mono font-bold text-emerald-400 tabular-nums">0.00</span>
-                            </div>
-                            <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                <div id="crrBar" class="h-full bg-emerald-500 rounded-full transition-all duration-700 ease-out" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-[11px] mb-1">
-                                <span class="text-neutral-500">Required</span>
-                                <span id="rrrBarValue" class="font-mono font-bold text-red-400 tabular-nums">0.00</span>
-                            </div>
-                            <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                <div id="rrrBar" class="h-full bg-red-500 rounded-full transition-all duration-700 ease-out" style="width: 0%"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="rateDifference" class="mt-3 text-center text-[11px] text-neutral-600 font-medium">--</div>
-                </div>
-
-                <!-- Match Stats -->
-                <div class="p-4 rounded-lg bg-white/[0.03] border border-white/5">
-                    <h3 class="text-[10px] text-neutral-600 uppercase tracking-wider font-bold mb-3">Match Stats</h3>
-                    <div class="space-y-2">
-                        <div class="flex justify-between text-sm">
-                            <span class="text-neutral-500">Fours</span>
-                            <span id="fours" class="font-mono font-bold tabular-nums">0</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-neutral-500">Sixes</span>
-                            <span id="sixes" class="font-mono font-bold tabular-nums">0</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-neutral-500">Extras</span>
-                            <span id="extras" class="font-mono font-bold tabular-nums">0</span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span class="text-neutral-500">Dots</span>
-                            <span class="font-mono font-bold tabular-nums"><span id="dotBalls">0</span> <span id="dotPercent" class="text-neutral-600 text-xs">(0%)</span></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Partnership -->
-                <div class="p-4 rounded-lg bg-white/[0.03] border border-white/5">
-                    <h3 class="text-[10px] text-neutral-600 uppercase tracking-wider font-bold mb-3">Partnership</h3>
-                    <div class="flex items-baseline gap-2">
-                        <span id="partnershipRuns" class="text-2xl font-black tabular-nums text-white">0</span>
-                        <span class="text-xs text-neutral-600">runs, <span id="partnershipBalls" class="tabular-nums">0</span> balls</span>
-                    </div>
-                    <div class="text-xs text-neutral-600 mt-1"><span id="partnershipWicket">1st</span> wicket</div>
-                </div>
-
-                <!-- Recent Overs -->
-                <div class="p-4 rounded-lg bg-white/[0.03] border border-white/5">
-                    <h3 class="text-[10px] text-neutral-600 uppercase tracking-wider font-bold mb-3">Recent Overs</h3>
-                    <div id="recentOvers" class="space-y-1.5">
-                        <div class="text-xs text-neutral-700 text-center py-3">No overs yet</div>
-                    </div>
-                </div>
-
-            </aside>
+        <!-- Hidden elements to keep JS refs valid -->
+        <div class="hidden">
+            <span id="crrBar"></span><span id="rrrBar"></span>
+            <span id="crrBarValue"></span><span id="rrrBarValue"></span>
+            <span id="rateDifference"></span>
+            <span id="fours"></span><span id="sixes"></span>
+            <span id="extras"></span><span id="dotBalls"></span><span id="dotPercent"></span>
+            <span id="partnershipRuns"></span><span id="partnershipBalls"></span><span id="partnershipWicket"></span>
+            <span id="recentOvers"></span>
         </div>
     </main>
 

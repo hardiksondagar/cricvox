@@ -156,6 +156,24 @@ async def _generate_narrative_all_langs(
 
 def _build_score_data(state, ball: BallEvent, logic_result) -> dict:
     """Build the language-independent score update data."""
+    # Striker stats
+    striker_stats = None
+    if state.current_batsman and state.current_batsman in state.batsmen:
+        bs = state.batsmen[state.current_batsman]
+        striker_stats = {"name": bs.name, "runs": bs.runs, "balls": bs.balls_faced, "fours": bs.fours, "sixes": bs.sixes, "sr": round(bs.strike_rate, 1)}
+
+    # Non-striker stats
+    non_striker_stats = None
+    if state.non_striker and state.non_striker in state.batsmen:
+        bs = state.batsmen[state.non_striker]
+        non_striker_stats = {"name": bs.name, "runs": bs.runs, "balls": bs.balls_faced, "fours": bs.fours, "sixes": bs.sixes, "sr": round(bs.strike_rate, 1)}
+
+    # Current bowler stats
+    bowler_stats = None
+    if ball.bowler and ball.bowler in state.bowlers:
+        bw = state.bowlers[ball.bowler]
+        bowler_stats = {"name": bw.name, "overs": bw.overs_display, "runs": bw.runs_conceded, "wickets": bw.wickets, "econ": round(bw.economy, 1)}
+
     return {
         "total_runs": state.total_runs,
         "wickets": state.wickets,
@@ -176,6 +194,9 @@ def _build_score_data(state, ball: BallEvent, logic_result) -> dict:
         "is_six": ball.is_six,
         "branch": logic_result.branch.value,
         "is_pivot": logic_result.is_pivot,
+        "striker": striker_stats,
+        "non_striker": non_striker_stats,
+        "bowler_stats": bowler_stats,
     }
 
 

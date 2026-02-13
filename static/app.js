@@ -40,8 +40,15 @@ const els = {
     rrr: document.getElementById('rrr'),
     runsNeeded: document.getElementById('runsNeeded'),
     ballsRemaining: document.getElementById('ballsRemaining'),
-    currentBatsman: document.getElementById('currentBatsman'),
     currentBowler: document.getElementById('currentBowler'),
+    strikerName: document.getElementById('strikerName'),
+    strikerRuns: document.getElementById('strikerRuns'),
+    strikerBalls: document.getElementById('strikerBalls'),
+    nonStrikerName: document.getElementById('nonStrikerName'),
+    nonStrikerRuns: document.getElementById('nonStrikerRuns'),
+    nonStrikerBalls: document.getElementById('nonStrikerBalls'),
+    bowlerRuns: document.getElementById('bowlerRuns'),
+    bowlerWickets: document.getElementById('bowlerWickets'),
     matchPhase: document.getElementById('matchPhase'),
     overRuns: document.getElementById('overRuns'),
     fours: document.getElementById('fours'),
@@ -432,7 +439,14 @@ function highlightPlayingItem(idx) {
 
 function scrollToPlayingItem(idx) {
     const el = commentaryFeed.querySelector(`[data-idx="${idx}"]`);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (!el) return;
+    // Scroll within the commentary feed container only, not the whole page
+    const container = commentaryFeed;
+    const elTop = el.offsetTop - container.offsetTop;
+    const elHeight = el.offsetHeight;
+    const containerHeight = container.clientHeight;
+    const scrollTarget = elTop - (containerHeight / 2) + (elHeight / 2);
+    container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
 }
 
 
@@ -445,9 +459,30 @@ function updateScoreboard(d) {
     if (d.rrr != null) els.rrr.textContent = d.rrr.toFixed(2);
     els.runsNeeded.textContent = d.runs_needed;
     els.ballsRemaining.textContent = d.balls_remaining;
-    els.currentBatsman.textContent = d.batsman;
-    els.currentBowler.textContent = d.bowler;
     els.matchPhase.textContent = d.match_phase;
+
+    // Striker stats
+    if (d.striker) {
+        els.strikerName.textContent = d.striker.name;
+        els.strikerRuns.textContent = d.striker.runs;
+        els.strikerBalls.textContent = d.striker.balls;
+    }
+
+    // Non-striker stats
+    if (d.non_striker) {
+        els.nonStrikerName.textContent = d.non_striker.name;
+        els.nonStrikerRuns.textContent = d.non_striker.runs;
+        els.nonStrikerBalls.textContent = d.non_striker.balls;
+    }
+
+    // Bowler stats
+    if (d.bowler_stats) {
+        els.currentBowler.textContent = d.bowler_stats.name;
+        els.bowlerRuns.textContent = d.bowler_stats.runs;
+        els.bowlerWickets.textContent = d.bowler_stats.wickets;
+    } else {
+        els.currentBowler.textContent = d.bowler || '--';
+    }
 
     if (d.crr != null && d.rrr != null) updateRunRateBars(d.crr, d.rrr);
 

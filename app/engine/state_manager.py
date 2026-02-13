@@ -175,7 +175,13 @@ class StateManager:
         s.previous_bowler = s.current_bowler
         s.current_batsman = ball.batsman
         s.current_bowler = ball.bowler
-        s.non_striker = ball.non_striker
+
+        # Non-striker: use explicit value if provided, otherwise infer
+        if ball.non_striker:
+            s.non_striker = ball.non_striker
+        else:
+            active = [n for n, st in s.batsmen.items() if not st.is_out and n != ball.batsman]
+            s.non_striker = active[0] if active else None
 
         return s
 
