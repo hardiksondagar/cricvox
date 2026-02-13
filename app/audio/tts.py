@@ -1,62 +1,52 @@
 """
-Multi-vendor TTS facade.
+Multi-vendor TTS facade — per-language routing.
 
-Delegates to the configured TTS provider:
-  - "elevenlabs" → ElevenLabs eleven_v3  (stability-based emotion control)
-  - "sarvam"     → Sarvam AI Bulbul v3   (pace + temperature emotion control)
-  - "openai"     → OpenAI gpt-4o-mini-tts (instruction-based emotion control)
+Each language in languages.json specifies its own tts_vendor, tts_voice_id,
+and tts_model. This facade reads that config and dispatches to the correct
+provider module for each language.
 
-Set TTS_PROVIDER in .env to switch providers.
+Providers:
+  - "elevenlabs" → ElevenLabs eleven_v3
+  - "sarvam"     → Sarvam AI Bulbul v3
+  - "openai"     → OpenAI gpt-4o-mini-tts
 """
 
+import importlib
 import logging
-from typing import Callable, Awaitable
 
-from app.config import settings
-from app.models import NarrativeBranch
+from app.models import NarrativeBranch, SUPPORTED_LANGUAGES
 
 logger = logging.getLogger(__name__)
 
-# Type alias for the synthesize function signature
-SynthesizeFn = Callable[
-    [str, NarrativeBranch, bool, str],
-    Awaitable[str | None],
-]
-
-# Provider registry — lazy-loaded to avoid importing unused providers
-_PROVIDERS: dict[str, str] = {
+# Provider module registry
+_PROVIDER_MODULES: dict[str, str] = {
     "elevenlabs": "app.audio.elevenlabs",
     "sarvam": "app.audio.sarvam",
     "openai": "app.audio.openai_tts",
 }
 
-_cached_synthesize: SynthesizeFn | None = None
+# Cache imported modules
+_module_cache: dict[str, object] = {}
 
 
-def _get_provider_fn() -> SynthesizeFn:
-    """Lazily import and return the synthesize function for the configured provider."""
-    global _cached_synthesize
-    if _cached_synthesize is not None:
-        return _cached_synthesize
+def _get_provider_module(vendor: str):
+    """Lazily import and cache a provider module."""
+    if vendor in _module_cache:
+        return _module_cache[vendor]
 
-    provider = settings.tts_provider.lower().strip()
-    module_path = _PROVIDERS.get(provider)
-
+    module_path = _PROVIDER_MODULES.get(vendor)
     if module_path is None:
         logger.error(
-            f"Unknown TTS provider '{provider}'. "
-            f"Valid options: {', '.join(_PROVIDERS.keys())}. "
+            f"Unknown TTS vendor '{vendor}'. "
+            f"Valid options: {', '.join(_PROVIDER_MODULES.keys())}. "
             f"Falling back to elevenlabs."
         )
-        module_path = _PROVIDERS["elevenlabs"]
+        module_path = _PROVIDER_MODULES["elevenlabs"]
 
-    import importlib
     mod = importlib.import_module(module_path)
-    fn = getattr(mod, "synthesize")
-
-    logger.info(f"TTS provider initialized: {provider} ({module_path})")
-    _cached_synthesize = fn
-    return fn
+    _module_cache[vendor] = mod
+    logger.info(f"TTS provider loaded: {vendor} ({module_path})")
+    return mod
 
 
 async def synthesize_speech(
@@ -64,12 +54,17 @@ async def synthesize_speech(
     branch: NarrativeBranch,
     is_pivot: bool = False,
     language: str = "en",
-) -> str | None:
+) -> bytes | None:
     """
-    Convert commentary text to speech using the configured TTS provider.
-    Returns base64-encoded MP3 audio string, or None if TTS fails.
+    Convert commentary text to speech using the language's configured TTS vendor.
+    Returns raw MP3 audio bytes, or None if TTS fails.
 
-    This is the public API — callers don't need to know which provider is active.
+    Reads tts_vendor, tts_voice_id, tts_model from SUPPORTED_LANGUAGES[language].
     """
-    fn = _get_provider_fn()
-    return await fn(text, branch, is_pivot, language)
+    lang_cfg = SUPPORTED_LANGUAGES.get(language, SUPPORTED_LANGUAGES.get("en", {}))
+    vendor = lang_cfg.get("tts_vendor", "elevenlabs")
+    voice_id = lang_cfg.get("tts_voice_id", "")
+    model_id = lang_cfg.get("tts_model", "")
+
+    mod = _get_provider_module(vendor)
+    return await mod.synthesize(text, branch, is_pivot, language, voice_id, model_id)

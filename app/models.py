@@ -1,152 +1,30 @@
 from enum import Enum
+import json
+import logging
+from pathlib import Path
 from typing import Optional
 
 from pydantic import BaseModel, Field
 
 
 # =========================================================================== #
-#  Language Support Configuration
+#  Language Support Configuration — loaded from languages.json
 # =========================================================================== #
 
-# Common naturalness rule appended to every Indian language instruction
-_NATURAL_SPEECH_RULE = (
-    "CRITICAL — NATURAL SPEECH, NOT TRANSLATION: "
-    "Do NOT translate English commentary word-by-word. "
-    "Write as a NATIVE speaker would actually talk while watching cricket with friends or on local TV. "
-    "Use colloquial, everyday spoken language — the way real people speak, not textbook/literary language. "
-    "If an English phrase has no natural equivalent, just say it in English — that is how real code-mixing works. "
-    "Avoid awkward literal translations that no native speaker would ever say. "
-    "Numbers, scores, and player names should stay in English/Latin script for clarity."
-)
+_logger = logging.getLogger(__name__)
 
-SUPPORTED_LANGUAGES: dict[str, dict] = {
-    "en": {
-        "name": "English",
-        "native_name": "English",
-        "llm_instruction": "",
-        "elevenlabs_model": "eleven_v3",
-        "sarvam_language_code": "en-IN",
-    },
-    "hi": {
-        "name": "Hindi",
-        "native_name": "हिन्दी",
-        "llm_instruction": (
-            "LANGUAGE: Generate ALL commentary in HINDI (Devanagari script). "
-            "Cricket terms like 'boundary', 'wicket', 'six', 'four', 'over', 'run rate', "
-            "'powerplay', 'maiden', 'dot ball', 'no ball', 'wide', 'free hit', 'run out', "
-            "'caught', 'bowled', 'LBW' should stay in ENGLISH — this is natural Hinglish "
-            "as Indian TV commentators speak. Everything else MUST be in Hindi. "
-            + _NATURAL_SPEECH_RULE
-        ),
-        "elevenlabs_model": "eleven_v3",
-        "sarvam_language_code": "hi-IN",
-    },
-    "ta": {
-        "name": "Tamil",
-        "native_name": "தமிழ்",
-        "llm_instruction": (
-            "LANGUAGE: Generate ALL commentary in TAMIL (Tamil script). "
-            "Cricket terms like 'boundary', 'wicket', 'six', 'four', 'over', 'run rate', "
-            "'powerplay', 'maiden', 'dot ball', 'no ball', 'wide' should stay in ENGLISH — "
-            "this is natural Tamil-English code-mixing as Tamil TV commentators speak. "
-            "Everything else MUST be in Tamil. "
-            + _NATURAL_SPEECH_RULE
-        ),
-        "elevenlabs_model": "eleven_v3",
-        "sarvam_language_code": "ta-IN",
-    },
-    "te": {
-        "name": "Telugu",
-        "native_name": "తెలుగు",
-        "llm_instruction": (
-            "LANGUAGE: Generate ALL commentary in TELUGU (Telugu script). "
-            "Cricket terms like 'boundary', 'wicket', 'six', 'four', 'over', 'run rate', "
-            "'powerplay', 'maiden', 'dot ball' should stay in ENGLISH — "
-            "this is natural Telugu-English code-mixing. Everything else MUST be in Telugu. "
-            + _NATURAL_SPEECH_RULE
-        ),
-        "elevenlabs_model": "eleven_v3",
-        "sarvam_language_code": "te-IN",
-    },
-    "kn": {
-        "name": "Kannada",
-        "native_name": "ಕನ್ನಡ",
-        "llm_instruction": (
-            "LANGUAGE: Generate ALL commentary in KANNADA (Kannada script). "
-            "Cricket terms like 'boundary', 'wicket', 'six', 'four', 'over', 'run rate', "
-            "'powerplay', 'maiden', 'dot ball' should stay in ENGLISH — "
-            "natural Kannada-English code-mixing. Everything else MUST be in Kannada. "
-            + _NATURAL_SPEECH_RULE
-        ),
-        "elevenlabs_model": "eleven_v3",
-        "sarvam_language_code": "kn-IN",
-    },
-    "ml": {
-        "name": "Malayalam",
-        "native_name": "മലയാളം",
-        "llm_instruction": (
-            "LANGUAGE: Generate ALL commentary in MALAYALAM (Malayalam script). "
-            "Cricket terms like 'boundary', 'wicket', 'six', 'four', 'over', 'run rate', "
-            "'powerplay', 'maiden', 'dot ball' should stay in ENGLISH — "
-            "natural Malayalam-English code-mixing. Everything else MUST be in Malayalam. "
-            + _NATURAL_SPEECH_RULE
-        ),
-        "elevenlabs_model": "eleven_v3",
-        "sarvam_language_code": "ml-IN",
-    },
-    "bn": {
-        "name": "Bengali",
-        "native_name": "বাংলা",
-        "llm_instruction": (
-            "LANGUAGE: Generate ALL commentary in BENGALI (Bengali script). "
-            "Cricket terms like 'boundary', 'wicket', 'six', 'four', 'over', 'run rate', "
-            "'powerplay', 'maiden', 'dot ball' should stay in ENGLISH — "
-            "natural Bengali-English code-mixing. Everything else MUST be in Bengali. "
-            + _NATURAL_SPEECH_RULE
-        ),
-        "elevenlabs_model": "eleven_v3",
-        "sarvam_language_code": "bn-IN",
-    },
-    "mr": {
-        "name": "Marathi",
-        "native_name": "मराठी",
-        "llm_instruction": (
-            "LANGUAGE: Generate ALL commentary in MARATHI (Devanagari script). "
-            "Cricket terms like 'boundary', 'wicket', 'six', 'four', 'over', 'run rate', "
-            "'powerplay', 'maiden', 'dot ball' should stay in ENGLISH — "
-            "natural Marathi-English code-mixing. Everything else MUST be in Marathi. "
-            + _NATURAL_SPEECH_RULE
-        ),
-        "elevenlabs_model": "eleven_v3",
-        "sarvam_language_code": "mr-IN",
-    },
-    "gu": {
-        "name": "Gujarati",
-        "native_name": "ગુજરાતી",
-        "llm_instruction": (
-            "LANGUAGE: Generate ALL commentary in GUJARATI (Gujarati script). "
-            "Cricket terms like 'boundary', 'wicket', 'six', 'four', 'over', 'run rate', "
-            "'powerplay', 'maiden', 'dot ball' should stay in ENGLISH — "
-            "natural Gujarati-English code-mixing. Everything else MUST be in Gujarati. "
-            + _NATURAL_SPEECH_RULE
-        ),
-        "elevenlabs_model": "eleven_v3",
-        "sarvam_language_code": "gu-IN",
-    },
-    "pa": {
-        "name": "Punjabi",
-        "native_name": "ਪੰਜਾਬੀ",
-        "llm_instruction": (
-            "LANGUAGE: Generate ALL commentary in PUNJABI (Gurmukhi script). "
-            "Cricket terms like 'boundary', 'wicket', 'six', 'four', 'over', 'run rate', "
-            "'powerplay', 'maiden', 'dot ball' should stay in ENGLISH — "
-            "natural Punjabi-English code-mixing. Everything else MUST be in Punjabi. "
-            + _NATURAL_SPEECH_RULE
-        ),
-        "elevenlabs_model": "eleven_v3",
-        "sarvam_language_code": "pa-IN",
-    },
-}
+def _load_languages() -> dict[str, dict]:
+    """Load language configs from languages.json and return as a dict keyed by code."""
+    json_path = Path(__file__).parent.parent / "data" / "languages.json"
+    if not json_path.exists():
+        _logger.warning(f"languages.json not found at {json_path}, using empty config")
+        return {}
+    with open(json_path, encoding="utf-8") as f:
+        langs = json.load(f)
+    return {lang["code"]: lang for lang in langs}
+
+
+SUPPORTED_LANGUAGES: dict[str, dict] = _load_languages()
 
 
 class NarrativeBranch(str, Enum):

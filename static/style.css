@@ -41,26 +41,88 @@
 
 /* Commentary feed items */
 .feed-item {
-    padding: 12px 16px;
-    border-radius: 8px;
-    border-left: 3px solid transparent;
+    display: flex;
+    gap: 0;
+    border-radius: 10px;
     transition: background 0.15s ease;
     animation: feedIn 0.3s ease-out;
+    overflow: hidden;
 }
 
 .feed-item + .feed-item {
-    margin-top: 2px;
+    margin-top: 4px;
 }
 
 @keyframes feedIn {
-    from { opacity: 0; transform: translateY(-6px); }
+    from { opacity: 0; transform: translateY(-8px); }
     to   { opacity: 1; transform: translateY(0); }
 }
 
-.feed-item:hover { background: rgba(255,255,255,0.03); }
+.feed-item:hover { background: rgba(255,255,255,0.02); }
 
-.feed-item.feed-placeholder { background: none; border: none; animation: none; }
+.feed-item.feed-placeholder {
+    display: block;
+    background: none;
+    border: none;
+    animation: none;
+}
 .feed-item.feed-placeholder:hover { background: none; }
+
+/* Left column: ball info */
+.feed-ball-col {
+    width: 64px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 14px 0 14px 0;
+    gap: 6px;
+}
+
+.feed-ball-over {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #525252;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: -0.02em;
+}
+
+.feed-ball-indicator {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+}
+
+/* Ball indicator colors */
+.feed-ball-indicator.ball-W  { background: rgba(239,68,68,0.15); color: #f87171; }
+.feed-ball-indicator.ball-0  { background: rgba(255,255,255,0.04); color: #525252; }
+.feed-ball-indicator.ball-1,
+.feed-ball-indicator.ball-2,
+.feed-ball-indicator.ball-3  { background: rgba(59,130,246,0.12); color: #60a5fa; }
+.feed-ball-indicator.ball-4  { background: rgba(16,185,129,0.15); color: #34d399; }
+.feed-ball-indicator.ball-6  { background: rgba(139,92,246,0.15); color: #a78bfa; }
+.feed-ball-indicator.ball-wd,
+.feed-ball-indicator.ball-nb { background: rgba(251,146,60,0.12); color: #fb923c; }
+
+/* Right column: content */
+.feed-content-col {
+    flex: 1;
+    min-width: 0;
+    padding: 14px 16px 14px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.feed-item:first-child .feed-content-col {
+    border-bottom: none;
+}
 
 .feed-item .feed-meta {
     display: flex;
@@ -70,8 +132,8 @@
 }
 
 .feed-item .feed-over {
-    font-size: 0.7rem;
-    font-weight: 600;
+    font-size: 0.68rem;
+    font-weight: 500;
     color: #525252;
     font-family: 'JetBrains Mono', monospace;
 }
@@ -87,7 +149,7 @@
 
 .feed-item .feed-text {
     font-size: 0.9rem;
-    line-height: 1.55;
+    line-height: 1.6;
     color: #d4d4d4;
 }
 
@@ -98,14 +160,7 @@
     font-weight: 500;
 }
 
-/* Branch colors — subtle left border + badge */
-.branch-routine            { border-left-color: #404040; }
-.branch-boundary_momentum  { border-left-color: #10b981; }
-.branch-wicket_drama       { border-left-color: #ef4444; }
-.branch-pressure_builder   { border-left-color: #f59e0b; }
-.branch-over_transition    { border-left-color: #3b82f6; }
-.branch-extra_gift         { border-left-color: #f97316; }
-
+/* Branch badge colors */
 .badge-routine            { background: rgba(255,255,255,0.05); color: #737373; }
 .badge-boundary_momentum  { background: rgba(16,185,129,0.12); color: #34d399; }
 .badge-wicket_drama       { background: rgba(239,68,68,0.12); color: #f87171; }
@@ -114,27 +169,48 @@
 .badge-extra_gift         { background: rgba(249,115,22,0.12); color: #fb923c; }
 
 .feed-item.pivot {
-    border-left-width: 4px;
-    background: rgba(139,92,246,0.05);
+    background: rgba(139,92,246,0.04);
+}
+.feed-item.pivot .feed-ball-indicator {
+    box-shadow: 0 0 0 2px rgba(139,92,246,0.3);
 }
 
 /* Narrative moments */
-.feed-narrative { border-left-color: #8b5cf6; }
-.feed-narrative.narrative-first_innings_start,
-.feed-narrative.narrative-second_innings_start { border-left-color: #3b82f6; }
-.feed-narrative.narrative-first_innings_end    { border-left-color: #f97316; }
-.feed-narrative.narrative-match_result         { border-left-color: #eab308; }
-.feed-narrative.narrative-milestone            { border-left-color: #eab308; }
-.feed-narrative.narrative-new_batsman          { border-left-color: #ef4444; }
 .feed-narrative .feed-text { font-style: italic; color: #e5e5e5; }
 
+/* Narrative left column icon */
+.feed-narrative-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.narrative-icon-match_start,
+.narrative-icon-first_innings_start,
+.narrative-icon-second_innings_start { background: rgba(59,130,246,0.12); color: #60a5fa; }
+.narrative-icon-first_innings_end    { background: rgba(249,115,22,0.12); color: #fb923c; }
+.narrative-icon-match_result         { background: rgba(234,179,8,0.12); color: #facc15; }
+.narrative-icon-milestone            { background: rgba(234,179,8,0.12); color: #facc15; }
+.narrative-icon-new_batsman          { background: rgba(239,68,68,0.12); color: #f87171; }
+.narrative-icon-end_of_over          { background: rgba(59,130,246,0.12); color: #60a5fa; }
+.narrative-icon-phase_change         { background: rgba(16,185,129,0.12); color: #34d399; }
+.narrative-icon-general              { background: rgba(139,92,246,0.12); color: #a78bfa; }
+
 .badge-narrative {
-    background: rgba(139,92,246,0.15);
+    background: rgba(139,92,246,0.12);
     color: #a78bfa;
     font-size: 0.6rem;
+    font-weight: 700;
     padding: 2px 8px;
     border-radius: 4px;
     white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 }
 
 /* Recent over items */
@@ -189,10 +265,41 @@
     margin-bottom: 6px;
 }
 
-/* Audio toggle peer fix (Tailwind peer needs direct sibling) */
-.peer:checked ~ .peer-checked\:bg-emerald-500 { background-color: #10b981; }
-.peer:checked ~ div > .peer-checked\:translate-x-3 { transform: translateX(12px); }
-.peer:checked ~ div > .peer-checked\:bg-white { background-color: white; }
+
+/* Currently playing commentary highlight */
+.feed-item-playing {
+    background: rgba(16, 185, 129, 0.06) !important;
+    animation: none;
+}
+.feed-item-playing .feed-text {
+    color: #e5e5e5;
+}
+
+/* Audio play button in replay mode */
+.audio-play-btn {
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: none;
+    cursor: pointer;
+    font-size: 0.6rem;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+.audio-play-btn:hover {
+    background: rgba(16, 185, 129, 0.3);
+    transform: scale(1.1);
+}
+
+/* Match list items */
+.match-list-item + .match-list-item {
+    margin-top: 0;
+}
 
 @media (max-width: 768px) {
     .match-end-card { padding: 32px; }

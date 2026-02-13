@@ -1,0 +1,12 @@
+[
+  {
+    "code": "hi",
+    "name": "Hindi",
+    "native_name": "हिन्दी",
+    "tts_vendor": "elevenlabs",
+    "tts_voice_id": "JBFqnCBsd6RMkjVDRZzb",
+    "tts_model": "eleven_v3",
+    "sarvam_language_code": "hi-IN",
+    "llm_instruction": "LANGUAGE: Generate ALL commentary in HINDI (Devanagari script). Cricket terms like 'boundary', 'wicket', 'six', 'four', 'over', 'run rate', 'powerplay', 'maiden', 'dot ball', 'no ball', 'wide', 'free hit', 'run out', 'caught', 'bowled', 'LBW' should stay in ENGLISH — this is natural Hinglish as Indian TV commentators speak. Everything else MUST be in Hindi. CRITICAL — NATURAL SPEECH, NOT TRANSLATION: Do NOT translate English commentary word-by-word. Write as a NATIVE speaker would actually talk while watching cricket with friends or on local TV. Use colloquial, everyday spoken language — the way real people speak, not textbook/literary language. If an English phrase has no natural equivalent, just say it in English — that is how real code-mixing works. Avoid awkward literal translations that no native speaker would ever say. Numbers, scores, and player names should stay in English/Latin script for clarity."
+  }
+]

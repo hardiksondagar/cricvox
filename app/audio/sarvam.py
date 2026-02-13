@@ -14,11 +14,13 @@ Controls:
 
 import base64
 import logging
+# Note: base64 still needed — Sarvam API returns base64-encoded audio in JSON response
 
 import httpx
 
 from app.config import settings
 from app.models import NarrativeBranch, SUPPORTED_LANGUAGES
+# SUPPORTED_LANGUAGES still needed for sarvam_language_code lookup
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +52,7 @@ def _get_voice_params(branch: NarrativeBranch, is_pivot: bool) -> dict:
 
 def _get_sarvam_language_code(language: str) -> str:
     """Return the BCP-47 language code for Sarvam API."""
-    lang_cfg = SUPPORTED_LANGUAGES.get(language, SUPPORTED_LANGUAGES["en"])
+    lang_cfg = SUPPORTED_LANGUAGES.get(language, {})
     return lang_cfg.get("sarvam_language_code", "en-IN")
 
 
@@ -59,10 +61,16 @@ async def synthesize(
     branch: NarrativeBranch,
     is_pivot: bool = False,
     language: str = "en",
-) -> str | None:
+    voice_id: str = "",
+    model_id: str = "",
+) -> bytes | None:
     """
     Convert commentary text to speech using Sarvam AI API.
-    Returns base64-encoded MP3 audio string, or None if TTS fails.
+    Returns raw MP3 audio bytes, or None if TTS fails.
+
+    Args:
+        voice_id: Sarvam speaker name (from languages.json tts_voice_id).
+        model_id: Sarvam model name (from languages.json tts_model).
     """
     if not settings.sarvam_api_key:
         logger.warning("Sarvam API key not configured, skipping TTS")
@@ -70,12 +78,14 @@ async def synthesize(
 
     voice_params = _get_voice_params(branch, is_pivot)
     language_code = _get_sarvam_language_code(language)
+    speaker = voice_id or settings.sarvam_speaker
+    model = model_id or "bulbul:v3"
 
     payload: dict = {
         "text": text,
         "target_language_code": language_code,
-        "model": "bulbul:v3",
-        "speaker": settings.sarvam_speaker,
+        "model": model,
+        "speaker": speaker,
         "pace": voice_params["pace"],
         "temperature": voice_params["temperature"],
         "speech_sample_rate": 44100,
@@ -97,8 +107,8 @@ async def synthesize(
             data = response.json()
             audios = data.get("audios")
             if audios and len(audios) > 0:
-                # Sarvam returns base64-encoded audio directly in the response
-                return audios[0]
+                # Sarvam returns base64-encoded audio — decode to raw bytes
+                return base64.b64decode(audios[0])
 
             logger.warning("Sarvam returned empty audio")
             return None

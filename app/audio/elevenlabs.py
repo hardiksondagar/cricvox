@@ -21,13 +21,12 @@ Text formatting:
   and dashes (—) for breaks. The LLM prompt encourages these.
 """
 
-import base64
 import logging
 
 import httpx
 
 from app.config import settings
-from app.models import NarrativeBranch, SUPPORTED_LANGUAGES
+from app.models import NarrativeBranch
 
 logger = logging.getLogger(__name__)
 
@@ -64,34 +63,29 @@ def _get_voice_profile(
     return _VOICE_PROFILE.get(branch, _DEFAULT_PROFILE)
 
 
-def _get_elevenlabs_model(language: str) -> str:
-    """Return the best ElevenLabs model for the given language."""
-    lang_cfg = SUPPORTED_LANGUAGES.get(language, SUPPORTED_LANGUAGES["en"])
-    return lang_cfg.get("elevenlabs_model", "eleven_v3")
-
-
 async def synthesize(
     text: str,
     branch: NarrativeBranch,
     is_pivot: bool = False,
     language: str = "en",
-) -> str | None:
+    voice_id: str = "",
+    model_id: str = "",
+) -> bytes | None:
     """
     Convert commentary text to speech using ElevenLabs API.
-    Returns base64-encoded MP3 audio string, or None if TTS fails.
+    Returns raw MP3 audio bytes, or None if TTS fails.
 
-    Three layers of expressiveness:
-      1. voice_settings (stability + style) — per-branch emotional range
-      2. speed — slows wickets for gravity, quickens death overs
-      3. Audio Tags in text — LLM-generated [gasps], [excited], etc.
+    Args:
+        voice_id: ElevenLabs voice ID (from languages.json tts_voice_id).
+        model_id: ElevenLabs model name (from languages.json tts_model).
     """
     if not settings.elevenlabs_api_key:
         logger.warning("ElevenLabs API key not configured, skipping TTS")
         return None
 
     stability, style, speed = _get_voice_profile(branch, is_pivot)
-    voice_id = settings.elevenlabs_voice_id
-    model_id = _get_elevenlabs_model(language)
+    voice_id = voice_id or settings.elevenlabs_voice_id
+    model_id = model_id or "eleven_v3"
 
     url = ELEVENLABS_TTS_URL.format(voice_id=voice_id)
 
@@ -127,7 +121,7 @@ async def synthesize(
 
             audio_bytes = response.content
             if audio_bytes:
-                return base64.b64encode(audio_bytes).decode("utf-8")
+                return audio_bytes
 
             logger.warning("ElevenLabs returned empty audio")
             return None

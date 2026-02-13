@@ -1,6 +1,5 @@
 import re
 
-from app.config import settings
 from app.models import SUPPORTED_LANGUAGES
 
 
@@ -82,9 +81,10 @@ def strip_audio_tags(text: str) -> str:
     return _AUDIO_TAG_RE.sub("", text).strip()
 
 
-def _is_elevenlabs_provider() -> bool:
-    """Check if the configured TTS provider is ElevenLabs."""
-    return settings.tts_provider.lower().strip() == "elevenlabs"
+def _is_elevenlabs_provider(language: str = "en") -> bool:
+    """Check if the language's TTS vendor is ElevenLabs."""
+    lang_cfg = SUPPORTED_LANGUAGES.get(language, {})
+    return lang_cfg.get("tts_vendor", "").lower().strip() == "elevenlabs"
 
 
 _BASE_SYSTEM_PROMPT = """You are a professional TV cricket commentator. Think Harsha Bhogle — analytical, conversational, knows the game inside out.
@@ -397,13 +397,13 @@ def get_system_prompt(language: str = "en") -> str:
     - Prepends language instruction if non-English.
     - Appends ElevenLabs v3 audio tag instructions when provider is elevenlabs.
     """
-    lang_cfg = SUPPORTED_LANGUAGES.get(language, SUPPORTED_LANGUAGES["en"])
+    lang_cfg = SUPPORTED_LANGUAGES.get(language, {})
     instruction = lang_cfg.get("llm_instruction", "")
 
     prompt = _BASE_SYSTEM_PROMPT
     if instruction:
         prompt = f"{instruction}\n\n{prompt}"
-    if _is_elevenlabs_provider():
+    if _is_elevenlabs_provider(language):
         prompt = f"{prompt}\n{_AUDIO_TAG_INSTRUCTIONS}"
     return prompt
 
@@ -551,13 +551,13 @@ def get_narrative_system_prompt(language: str = "en") -> str:
     - Prepends language instruction if non-English.
     - Appends ElevenLabs v3 audio tag instructions when provider is elevenlabs.
     """
-    lang_cfg = SUPPORTED_LANGUAGES.get(language, SUPPORTED_LANGUAGES["en"])
+    lang_cfg = SUPPORTED_LANGUAGES.get(language, {})
     instruction = lang_cfg.get("llm_instruction", "")
 
     prompt = _BASE_NARRATIVE_SYSTEM_PROMPT
     if instruction:
         prompt = f"{instruction}\n\n{prompt}"
-    if _is_elevenlabs_provider():
+    if _is_elevenlabs_provider(language):
         prompt = f"{prompt}\n{_AUDIO_TAG_INSTRUCTIONS}"
     return prompt
 

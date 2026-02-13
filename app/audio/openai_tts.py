@@ -8,7 +8,6 @@ tone, pace, and emotion of the generated speech.
 Voices: alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer
 """
 
-import base64
 import logging
 
 from openai import AsyncOpenAI
@@ -86,11 +85,16 @@ async def synthesize(
     branch: NarrativeBranch,
     is_pivot: bool = False,
     language: str = "en",
-) -> str | None:
+    voice_id: str = "",
+    model_id: str = "",
+) -> bytes | None:
     """
     Convert commentary text to speech using OpenAI TTS API.
-    Uses gpt-4o-mini-tts with emotion instructions based on NarrativeBranch.
-    Returns base64-encoded MP3 audio string, or None if TTS fails.
+    Returns raw MP3 audio bytes, or None if TTS fails.
+
+    Args:
+        voice_id: OpenAI voice name (from languages.json tts_voice_id).
+        model_id: OpenAI TTS model name (from languages.json tts_model).
     """
     if not settings.openai_api_key:
         logger.warning("OpenAI API key not configured, skipping TTS")
@@ -98,19 +102,21 @@ async def synthesize(
 
     client = _get_client()
     instructions = _get_instructions(branch, is_pivot)
+    voice = voice_id or settings.openai_tts_voice
+    model = model_id or "gpt-4o-mini-tts"
 
     try:
         response = await client.audio.speech.create(
-            model="gpt-4o-mini-tts",
+            model=model,
             input=text,
-            voice=settings.openai_tts_voice,
+            voice=voice,
             instructions=instructions,
             response_format="mp3",
         )
 
         audio_bytes = response.read()
         if audio_bytes:
-            return base64.b64encode(audio_bytes).decode("utf-8")
+            return audio_bytes
 
         logger.warning("OpenAI TTS returned empty audio")
         return None
