@@ -1033,8 +1033,8 @@ function getTimelineBadgeLabel(b) {
     if (b.is_boundary) return { badge: 'badge-four', text: '4', title: 'Four' };
     const et = (b.extras_type || '').toLowerCase();
     const runs = (b.runs || 0) + (b.extras || 0);
-    if (et === 'wide' || et === 'wides') return { badge: 'badge-dot', text: runs > 0 ? `${runs}wd` : 'wd', title: 'Wide' };
-    if (et === 'noball' || et === 'no_ball') return { badge: 'badge-dot', text: runs > 0 ? `${runs}nb` : 'nb', title: 'No ball' };
+    if (et === 'wide' || et === 'wides') return { badge: 'badge-wide', text: String(runs), title: 'Wide' };
+    if (et === 'noball' || et === 'no_ball') return { badge: 'badge-noball', text: String(runs), title: 'No ball' };
     return { badge: 'badge-dot', text: String(runs), title: `${runs} run${runs !== 1 ? 's' : ''}` };
 }
 
@@ -1259,7 +1259,21 @@ function onTrackMouseMove(e) {
 
     const idx = getTimelineIdxFromEvent(e);
     const ball = timelineBalls[idx];
-    if (!ball) { tlTooltip.classList.add('hidden'); return; }
+    if (!ball) {
+        tlTooltip.classList.add('hidden');
+        clearTimelineHover();
+        return;
+    }
+
+    // Show cursor and highlight badge at hover position (like when dragging)
+    const total = timelineBalls.length;
+    const pct = total > 1 ? (idx / (total - 1)) * 100 : 0;
+    tlCursor.classList.remove('hidden');
+    tlCursor.style.left = `${pct}%`;
+
+    tlBadges.querySelectorAll('.timeline-badge.hover').forEach(el => el.classList.remove('hover'));
+    const hoverBadge = tlBadges.querySelector(`.timeline-badge[data-timeline-idx="${idx}"]`);
+    if (hoverBadge) hoverBadge.classList.add('hover');
 
     // Position tooltip
     const rect = tlTrack.getBoundingClientRect();
@@ -1316,7 +1330,13 @@ function onTrackMouseMove(e) {
 function onTrackMouseLeave() {
     if (!isDragging) {
         tlTooltip.classList.add('hidden');
+        clearTimelineHover();
     }
+}
+
+function clearTimelineHover() {
+    tlBadges.querySelectorAll('.timeline-badge.hover').forEach(el => el.classList.remove('hover'));
+    updateTimelineCursor(); // Restore cursor/badge to playback position
 }
 
 

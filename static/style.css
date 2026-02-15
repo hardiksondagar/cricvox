@@ -465,29 +465,47 @@
     line-height: 1;
 }
 
-.timeline-badge:hover {
-    transform: translate(-50%, -50%) scale(1.2);
-    opacity: 1;
-    z-index:999;
-}
 
-.timeline-badge.badge-wicket   { background: rgba(239,68,68,0.9); color: #fff; box-shadow: 0 0 4px rgba(248,113,113,0.4); }
+.timeline-badge.badge-wicket   { background: rgba(239,68,68,0.9); color: #fff; box-shadow: 0 0 6px rgba(248,113,113,0.5); z-index: 10; }
 .timeline-badge.badge-six      { background: rgba(139,92,246,0.9); color: #fff; box-shadow: 0 0 4px rgba(167,139,250,0.3); }
 .timeline-badge.badge-four     { background: rgba(16,185,129,0.9); color: #fff; box-shadow: 0 0 4px rgba(52,211,153,0.3); }
-.timeline-badge.badge-dot      { width: 6px; height: 6px; background: rgba(255,255,255,0.35); font-size: 0; box-shadow: none; opacity: 0.6; color: #0a0a0a; }
+.timeline-badge.badge-dot,
+.timeline-badge.badge-wide,
+.timeline-badge.badge-noball   { width: 2px; height: 2px; background: rgba(255,255,255,0.35); font-size: 0; box-shadow: none; opacity: 0.6; color: #0a0a0a; }
+
+.timeline-badge.hover {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 1;
+    z-index: 999;
+}
+
+/* Shared expand for dot-like badges on hover / active */
+.timeline-badge.hover.badge-dot,
+.timeline-badge.hover.badge-wide,
+.timeline-badge.hover.badge-noball,
+.timeline-badge.active.badge-dot,
+.timeline-badge.active.badge-wide,
+.timeline-badge.active.badge-noball { width: 10px; height: 10px; font-size: 0.7rem; }
+
+/* Per-type colours — hover */
+.timeline-badge.hover.badge-dot    { background: rgba(255,255,255,0.9); box-shadow: 0 0 6px rgba(255,255,255,0.4); }
+.timeline-badge.hover.badge-wide   { background: rgba(245,158,11,0.9); color: #0a0a0a; box-shadow: 0 0 4px rgba(251,191,36,0.4); }
+.timeline-badge.hover.badge-noball { background: rgba(249,115,22,0.9); color: #fff; box-shadow: 0 0 4px rgba(251,146,60,0.4); }
+
+/* Per-type colours — active */
+.timeline-badge.active.badge-dot    { background: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.4); }
+.timeline-badge.active.badge-wide   { background: rgba(245,158,11,0.9); color: #0a0a0a; box-shadow: 0 0 8px rgba(251,191,36,0.5); }
+.timeline-badge.active.badge-noball { background: rgba(249,115,22,0.9); color: #fff; box-shadow: 0 0 8px rgba(251,146,60,0.5); }
+
+.timeline-badge.hover.active {
+    transform: translate(-50%, -50%) scale(2);
+}
 
 .timeline-badge.active {
     transform: translate(-50%, -50%) scale(1.25);
     opacity: 1;
     box-shadow: 0 0 8px rgba(255, 255, 255, 0.5), 0 0 0 1px #fff;
     z-index: 999;
-}
-.timeline-badge.active.badge-dot {
-    width: 14px;
-    height: 14px;
-    background: #fff;
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
-    font-size: 0.65rem;
 }
 
 /* Innings separator — rendered as a dot like wicket/six badges */
