@@ -117,7 +117,16 @@ Tracks everything a commentator would know:
 **Deliveries:** POST single (auto-precomputes), POST bulk, GET list/detail
 **Innings Stats:** GET summary, batters, bowlers, fall-of-wickets, partnerships, innings records
 **Commentaries:** GET poll, GET single, DELETE all
-**Generation:** POST match text (background), POST single text, POST match audio (background), POST single audio
+
+**Generation (unified):**
+- `POST /api/matches/{id}/generate_commentaries` — overs, innings, delivery_id, generate_audio
+  - No params: all deliveries (background). `overs`+`innings`: specific overs (background). `innings` **required** when overs passed.
+  - `delivery_id` alone: single delivery (sync). `generate_audio=true`: chain audio after text.
+  - Idempotent: deletes existing commentaries for target balls before adding new.
+- `POST /api/matches/{id}/generate_commentaries_audio` — overs, innings, commentary_id, language
+  - Same overs logic: `innings` **required** when overs passed. `commentary_id` alone: single commentary (sync).
+  - Commentary text must exist before audio. Optional `language` filter.
+
 **Other:** GET timeline, GET languages, GET `/api/matches/{id}/full` (everything in one call)
 
 ### Narrative Moments
@@ -137,12 +146,13 @@ Tracks everything a commentator would know:
 
 1. **LLM gets bare facts only** — no shot descriptions. Infers context from stats.
 2. **Context is selective** — logic engine surfaces what matters for THIS delivery.
-3. **Wicket = only story** — on wickets, all momentum/dot/boundary noise suppressed.
-4. **Commentary history** — last 5 lines sent to LLM to prevent repetition.
-5. **Precompute on insert** — context computed when delivery added, not as separate step.
-6. **Normalized schema** — key fields promoted from JSON, stats in dedicated tables.
-7. **Gender-neutral terminology** — `batter` not batsman, `deliveries` not balls.
-8. **Everything is an API** — data loading uses the same endpoints as UI/CLI.
+3. **Score from deliveries** — no `score_update` commentary events. Commentary API enriches `ball_info` from deliveries table; frontend uses that for scoreboard/feed.
+4. **Wicket = only story** — on wickets, all momentum/dot/boundary noise suppressed.
+5. **Commentary history** — last 6 lines sent to LLM to prevent repetition.
+6. **Precompute on insert** — context computed when delivery added, not as separate step.
+7. **Normalized schema** — key fields promoted from JSON, stats in dedicated tables.
+8. **Gender-neutral terminology** — `batter` not batsman, `deliveries` not balls.
+9. **Everything is an API** — data loading uses the same endpoints as UI/CLI.
 
 ## Testing
 

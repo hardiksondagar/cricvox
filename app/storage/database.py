@@ -1141,7 +1141,14 @@ async def get_commentaries_after(
     if language:
         query = """
             SELECT c.*, b.over as b_over, b.ball as b_ball,
-                   b.batter as b_batter, b.bowler as b_bowler, b.data as ball_data
+                   b.batter as b_batter, b.bowler as b_bowler, b.non_batter as b_non_batter,
+                   b.runs as b_runs, b.extras as b_extras, b.extras_type as b_extras_type,
+                   b.is_wicket as b_is_wicket, b.is_boundary as b_is_boundary, b.is_six as b_is_six,
+                   b.total_runs as b_total_runs, b.total_wickets as b_total_wickets,
+                   b.overs_completed as b_overs_completed, b.balls_in_over as b_balls_in_over,
+                   b.crr as b_crr, b.rrr as b_rrr,
+                   b.runs_needed as b_runs_needed, b.balls_remaining as b_balls_remaining,
+                   b.match_phase as b_match_phase, b.data as ball_data
             FROM match_commentaries c
             LEFT JOIN deliveries b ON c.ball_id = b.id
             WHERE c.match_id = ? AND c.seq > ? AND (c.language = ? OR c.language IS NULL)
@@ -1151,7 +1158,14 @@ async def get_commentaries_after(
     else:
         query = """
             SELECT c.*, b.over as b_over, b.ball as b_ball,
-                   b.batter as b_batter, b.bowler as b_bowler, b.data as ball_data
+                   b.batter as b_batter, b.bowler as b_bowler, b.non_batter as b_non_batter,
+                   b.runs as b_runs, b.extras as b_extras, b.extras_type as b_extras_type,
+                   b.is_wicket as b_is_wicket, b.is_boundary as b_is_boundary, b.is_six as b_is_six,
+                   b.total_runs as b_total_runs, b.total_wickets as b_total_wickets,
+                   b.overs_completed as b_overs_completed, b.balls_in_over as b_balls_in_over,
+                   b.crr as b_crr, b.rrr as b_rrr,
+                   b.runs_needed as b_runs_needed, b.balls_remaining as b_balls_remaining,
+                   b.match_phase as b_match_phase, b.data as ball_data
             FROM match_commentaries c
             LEFT JOIN deliveries b ON c.ball_id = b.id
             WHERE c.match_id = ? AND c.seq > ?
@@ -1168,7 +1182,14 @@ async def get_commentary_by_id(commentary_id: int) -> dict | None:
     db = _get_db()
     query = """
         SELECT c.*, b.over as b_over, b.ball as b_ball,
-               b.batter as b_batter, b.bowler as b_bowler, b.data as ball_data
+               b.batter as b_batter, b.bowler as b_bowler, b.non_batter as b_non_batter,
+               b.runs as b_runs, b.extras as b_extras, b.extras_type as b_extras_type,
+               b.is_wicket as b_is_wicket, b.is_boundary as b_is_boundary, b.is_six as b_is_six,
+               b.total_runs as b_total_runs, b.total_wickets as b_total_wickets,
+               b.overs_completed as b_overs_completed, b.balls_in_over as b_balls_in_over,
+               b.crr as b_crr, b.rrr as b_rrr,
+               b.runs_needed as b_runs_needed, b.balls_remaining as b_balls_remaining,
+               b.match_phase as b_match_phase, b.data as ball_data
         FROM match_commentaries c
         LEFT JOIN deliveries b ON c.ball_id = b.id
         WHERE c.id = ?
@@ -1190,7 +1211,14 @@ async def get_commentaries_pending_audio(
     if language:
         query = """
             SELECT c.*, b.over as b_over, b.ball as b_ball,
-                   b.batter as b_batter, b.bowler as b_bowler, b.data as ball_data
+                   b.batter as b_batter, b.bowler as b_bowler, b.non_batter as b_non_batter,
+                   b.runs as b_runs, b.extras as b_extras, b.extras_type as b_extras_type,
+                   b.is_wicket as b_is_wicket, b.is_boundary as b_is_boundary, b.is_six as b_is_six,
+                   b.total_runs as b_total_runs, b.total_wickets as b_total_wickets,
+                   b.overs_completed as b_overs_completed, b.balls_in_over as b_balls_in_over,
+                   b.crr as b_crr, b.rrr as b_rrr,
+                   b.runs_needed as b_runs_needed, b.balls_remaining as b_balls_remaining,
+                   b.match_phase as b_match_phase, b.data as ball_data
             FROM match_commentaries c
             LEFT JOIN deliveries b ON c.ball_id = b.id
             WHERE c.match_id = ? AND c.language = ?
@@ -1202,7 +1230,14 @@ async def get_commentaries_pending_audio(
     else:
         query = """
             SELECT c.*, b.over as b_over, b.ball as b_ball,
-                   b.batter as b_batter, b.bowler as b_bowler, b.data as ball_data
+                   b.batter as b_batter, b.bowler as b_bowler, b.non_batter as b_non_batter,
+                   b.runs as b_runs, b.extras as b_extras, b.extras_type as b_extras_type,
+                   b.is_wicket as b_is_wicket, b.is_boundary as b_is_boundary, b.is_six as b_is_six,
+                   b.total_runs as b_total_runs, b.total_wickets as b_total_wickets,
+                   b.overs_completed as b_overs_completed, b.balls_in_over as b_balls_in_over,
+                   b.crr as b_crr, b.rrr as b_rrr,
+                   b.runs_needed as b_runs_needed, b.balls_remaining as b_balls_remaining,
+                   b.match_phase as b_match_phase, b.data as ball_data
             FROM match_commentaries c
             LEFT JOIN deliveries b ON c.ball_id = b.id
             WHERE c.match_id = ? AND c.language IS NOT NULL
@@ -1211,6 +1246,88 @@ async def get_commentaries_pending_audio(
             ORDER BY c.seq, c.id
         """
         params = (match_id,)
+
+    async with db.execute(query, params) as cur:
+        return [_row_to_commentary(r) for r in await cur.fetchall()]
+
+
+async def get_deliveries_by_overs(
+    match_id: int,
+    innings: int,
+    overs: list[int],
+) -> list[dict]:
+    """
+    Fetch deliveries for specific over numbers (0-indexed) in a given innings.
+    Returns deliveries ordered by ball_index.
+    """
+    if not overs:
+        return []
+    db = _get_db()
+    placeholders = ",".join("?" * len(overs))
+    query = (
+        f"SELECT * FROM deliveries "
+        f"WHERE match_id = ? AND innings = ? AND over IN ({placeholders}) "
+        f"ORDER BY ball_index"
+    )
+    params = [match_id, innings] + overs
+    async with db.execute(query, params) as cur:
+        return [_row_to_delivery(r) for r in await cur.fetchall()]
+
+
+async def get_commentaries_pending_audio_by_ball_ids(
+    match_id: int,
+    ball_ids: list[int],
+    language: str | None = None,
+) -> list[dict]:
+    """
+    Fetch commentaries that have text but no audio_url yet,
+    filtered to specific ball (delivery) IDs.
+    Used by overs-based audio generation.
+    """
+    if not ball_ids:
+        return []
+    db = _get_db()
+    placeholders = ",".join("?" * len(ball_ids))
+    if language:
+        query = f"""
+            SELECT c.*, b.over as b_over, b.ball as b_ball,
+                   b.batter as b_batter, b.bowler as b_bowler, b.non_batter as b_non_batter,
+                   b.runs as b_runs, b.extras as b_extras, b.extras_type as b_extras_type,
+                   b.is_wicket as b_is_wicket, b.is_boundary as b_is_boundary, b.is_six as b_is_six,
+                   b.total_runs as b_total_runs, b.total_wickets as b_total_wickets,
+                   b.overs_completed as b_overs_completed, b.balls_in_over as b_balls_in_over,
+                   b.crr as b_crr, b.rrr as b_rrr,
+                   b.runs_needed as b_runs_needed, b.balls_remaining as b_balls_remaining,
+                   b.match_phase as b_match_phase, b.data as ball_data
+            FROM match_commentaries c
+            LEFT JOIN deliveries b ON c.ball_id = b.id
+            WHERE c.match_id = ? AND c.ball_id IN ({placeholders})
+              AND c.language = ?
+              AND c.text IS NOT NULL AND c.text != ''
+              AND c.audio_url IS NULL
+            ORDER BY c.seq, c.id
+        """
+        params: list = [match_id] + ball_ids + [language]
+    else:
+        query = f"""
+            SELECT c.*, b.over as b_over, b.ball as b_ball,
+                   b.batter as b_batter, b.bowler as b_bowler, b.non_batter as b_non_batter,
+                   b.runs as b_runs, b.extras as b_extras, b.extras_type as b_extras_type,
+                   b.is_wicket as b_is_wicket, b.is_boundary as b_is_boundary, b.is_six as b_is_six,
+                   b.total_runs as b_total_runs, b.total_wickets as b_total_wickets,
+                   b.overs_completed as b_overs_completed, b.balls_in_over as b_balls_in_over,
+                   b.crr as b_crr, b.rrr as b_rrr,
+                   b.runs_needed as b_runs_needed, b.balls_remaining as b_balls_remaining,
+                   b.match_phase as b_match_phase, b.data as ball_data
+            FROM match_commentaries c
+            LEFT JOIN deliveries b ON c.ball_id = b.id
+            WHERE c.match_id = ? AND c.ball_id IN ({placeholders})
+              AND c.language IS NOT NULL
+              AND c.text IS NOT NULL AND c.text != ''
+              AND c.audio_url IS NULL
+            ORDER BY c.seq, c.id
+        """
+        params = [match_id] + ball_ids
 
     async with db.execute(query, params) as cur:
         return [_row_to_commentary(r) for r in await cur.fetchall()]
@@ -1254,6 +1371,20 @@ async def delete_commentaries(match_id: int) -> int:
     db = _get_db()
     cursor = await db.execute(
         "DELETE FROM match_commentaries WHERE match_id = ?", (match_id,)
+    )
+    await db.commit()
+    return cursor.rowcount
+
+
+async def delete_commentaries_by_ball_ids(match_id: int, ball_ids: list[int]) -> int:
+    """Delete commentaries for specific ball (delivery) IDs. Returns count deleted."""
+    if not ball_ids:
+        return 0
+    db = _get_db()
+    placeholders = ",".join("?" * len(ball_ids))
+    cursor = await db.execute(
+        f"DELETE FROM match_commentaries WHERE match_id = ? AND ball_id IN ({placeholders})",
+        [match_id] + ball_ids,
     )
     await db.commit()
     return cursor.rowcount
@@ -1311,11 +1442,30 @@ def _row_to_commentary(row: aiosqlite.Row) -> dict:
     }
     # Include joined delivery data if present
     if row["b_over"] is not None:
+        ball_runs = (row["b_runs"] or 0) + (row["b_extras"] or 0)
+        overs_display = f"{row['b_overs_completed']}.{row['b_balls_in_over']}"
         result["ball_info"] = {
             "over": row["b_over"],
             "ball": row["b_ball"],
             "batter": row["b_batter"],
             "bowler": row["b_bowler"],
+            "non_batter": row["b_non_batter"],
+            "runs": row["b_runs"],
+            "extras": row["b_extras"],
+            "extras_type": row["b_extras_type"],
+            "is_wicket": bool(row["b_is_wicket"]),
+            "is_boundary": bool(row["b_is_boundary"]),
+            "is_six": bool(row["b_is_six"]),
+            "ball_runs": ball_runs,
+            # Match snapshot after this delivery
+            "total_runs": row["b_total_runs"],
+            "total_wickets": row["b_total_wickets"],
+            "overs": overs_display,
+            "crr": row["b_crr"],
+            "rrr": row["b_rrr"],
+            "runs_needed": row["b_runs_needed"],
+            "balls_remaining": row["b_balls_remaining"],
+            "match_phase": row["b_match_phase"],
             "data": json.loads(row["ball_data"]) if row["ball_data"] else None,
         }
     else:

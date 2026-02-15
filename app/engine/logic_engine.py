@@ -39,9 +39,9 @@ class LogicEngine:
         if ball.is_wicket:
             return NarrativeBranch.WICKET_DRAMA
 
-        # Extras in a close game
+        # Extras in a close game (chase innings only for runs_needed check)
         if ball.extras > 0 and ball.extras_type in ("wide", "noball"):
-            if state.runs_needed <= 30 or state.match_phase == "death":
+            if (state.target > 0 and state.runs_needed <= 30) or state.match_phase == "death":
                 return NarrativeBranch.EXTRA_GIFT
 
         # Boundary (4 or 6)
@@ -52,8 +52,8 @@ class LogicEngine:
         if state.consecutive_dots >= 3:
             return NarrativeBranch.PRESSURE_BUILDER
 
-        # Pressure builder: climbing RRR
-        if state.rrr > 12 and ball.runs <= 1:
+        # Pressure builder: climbing RRR (chase innings only)
+        if state.target > 0 and state.rrr > 12 and ball.runs <= 1:
             return NarrativeBranch.PRESSURE_BUILDER
 
         # Over transition (6th ball, no wicket/boundary)
@@ -259,9 +259,9 @@ class LogicEngine:
                 notes.append(f"Powerplay finished: {state.powerplay_runs} runs")
 
         # ============================================================== #
-        #  9. EQUATION — death overs (always show, even on wickets)
+        #  9. EQUATION — death overs, chase only (always show, even on wickets)
         # ============================================================== #
-        if state.match_phase == "death":
+        if state.match_phase == "death" and state.target > 0:
             notes.append(
                 f"Need {state.runs_needed} from {state.balls_remaining} balls "
                 f"(RRR {state.rrr})"
@@ -274,7 +274,14 @@ class LogicEngine:
         """
         Assess the overall match situation so the LLM knows the real picture.
         Returns a clear, honest label — no false hope, no fake tension.
+
+        Only applies to the chase innings (target > 0). First innings has no
+        chase equation, so return empty.
         """
+        # First innings — no chase target, situation assessment doesn't apply
+        if state.target <= 0:
+            return ""
+
         rrr = state.rrr
         wickets = state.wickets
         balls = state.balls_remaining

@@ -2,14 +2,15 @@
 FastAPI app — comprehensive API for AI Cricket Commentary Engine.
 
 API surface:
-  Matches:       POST /api/matches, GET list/detail, PATCH update
-  Deliveries:    POST single/bulk (auto-computes context + innings summary)
-  Commentaries:  GET list/detail, DELETE
-  Generate text: POST whole match, POST single delivery
-  Generate audio: POST whole match, POST single commentary
-  Innings:       GET summary (batting/bowling stats from stored deliveries),
-                 GET innings records, GET batters, GET bowlers, GET partnerships
-  Languages:     GET list
+  Matches:        POST /api/matches, GET list/detail, PATCH update
+  Deliveries:     POST single/bulk (auto-computes context + innings summary)
+  Commentaries:   GET list/detail, DELETE
+  Generate text:  POST /api/matches/{id}/generate_commentaries
+                  (all / by overs / by delivery_id, optional audio)
+  Generate audio: POST /api/matches/{id}/generate_commentaries_audio
+                  (all / by overs / by commentary_id)
+  Innings:        GET summary, innings records, batters, bowlers, partnerships
+  Languages:      GET list
 """
 
 import logging
@@ -42,6 +43,8 @@ from app.storage.database import (
 from app.generate import (
     generate_match, generate_ball_commentary,
     generate_match_audio, generate_commentary_audio,
+    generate_overs_commentary, generate_overs_audio,
+    generate_ball_audio,
 )
 from app.engine.precompute import precompute_match_context, precompute_ball_context
 from app.engine.state_manager import StateManager
@@ -550,12 +553,14 @@ async def api_match_timeline(match_id: int):
         if inn not in innings_map:
             innings_map[inn] = []
         data = b.get("data") or {}
+        overs_display = f"{b.get('overs_completed', b['over'])}.{b.get('balls_in_over', b['ball'])}"
         innings_map[inn].append({
             "ball_id": b["id"],
             "over": b["over"],
             "ball": b["ball"],
             "batter": b["batter"],
             "bowler": b["bowler"],
+            "non_batter": b.get("non_batter"),
             "runs": b["runs"],
             "extras": b["extras"],
             "extras_type": b["extras_type"],
@@ -563,6 +568,15 @@ async def api_match_timeline(match_id: int):
             "wicket_type": data.get("wicket_type"),
             "is_boundary": b["is_boundary"],
             "is_six": b["is_six"],
+            # Score snapshot after this delivery (for timeline scrubbing)
+            "total_runs": b.get("total_runs"),
+            "total_wickets": b.get("total_wickets"),
+            "overs": overs_display,
+            "crr": b.get("crr"),
+            "rrr": b.get("rrr"),
+            "runs_needed": b.get("runs_needed"),
+            "balls_remaining": b.get("balls_remaining"),
+            "match_phase": b.get("match_phase"),
         })
 
     match_info = match.get("match_info", {})
@@ -708,130 +722,214 @@ async def api_delete_commentaries(match_id: int):
 
 
 # ================================================================== #
-#  API: Commentary text generation (LLM)
+#  API: Commentary text generation (LLM) — unified endpoint
 # ================================================================== #
 
-class GenerateMatchRequest(BaseModel):
-    start_over: int = 1
-
-
-@app.post("/api/matches/{match_id}/commentaries/generate")
-async def api_generate_match_commentary(
+@app.post("/api/matches/{match_id}/generate_commentaries")
+async def api_generate_commentaries(
     match_id: int,
-    body: GenerateMatchRequest,
     background_tasks: BackgroundTasks,
+    innings: int | None = None,
+    overs: str | None = None,
+    delivery_id: int | None = None,
+    generate_audio: bool = False,
 ):
     """
-    Generate LLM commentary text for an entire match (no audio).
+    Unified commentary generation endpoint.
 
-    Processes all deliveries from start_over, generates score updates,
-    ball commentary, and narrative moments for all configured languages.
+    Generates LLM commentary text (and optionally TTS audio) for a match.
 
-    Runs in the background — returns immediately with status.
+    Behaviour depends on query parameters:
+      - **No params**: generate for ALL deliveries in the match (background).
+      - **overs** (comma-separated, 1-indexed) + **innings**: generate for those overs (background).
+        innings is required when overs is provided.
+      - **delivery_id** (no overs): generate for that single delivery (sync).
+      - **generate_audio** (default false): if true, also generate TTS audio after text.
     """
     match = await get_match(match_id)
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
 
+    # ── Case 1: Single delivery (synchronous) ──────────────────────
+    if delivery_id is not None and overs is None:
+        delivery = await get_delivery_by_id(delivery_id)
+        if not delivery:
+            raise HTTPException(status_code=404, detail="Delivery not found")
+        if delivery["match_id"] != match_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Delivery does not belong to this match",
+            )
+
+        result = await generate_ball_commentary(
+            match_id=match_id,
+            ball_id=delivery_id,
+        )
+        if result["status"] == "error":
+            raise HTTPException(status_code=400, detail=result["message"])
+
+        # Optionally generate audio for this delivery's commentaries
+        if generate_audio:
+            audio_result = await generate_ball_audio(match_id, delivery_id)
+            result["audio"] = audio_result
+
+        return result
+
+    # ── Case 2: Specific overs (background) ───────────────────────
+    if overs is not None:
+        if innings is None:
+            raise HTTPException(
+                status_code=400,
+                detail="innings is required when overs is provided",
+            )
+        try:
+            overs_list = [int(o.strip()) for o in overs.split(",") if o.strip()]
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid overs format. Use comma-separated numbers (e.g. 1,2,3)",
+            )
+        if not overs_list:
+            raise HTTPException(status_code=400, detail="No valid overs provided")
+
+        overs_0indexed = [o - 1 for o in overs_list]
+
+        async def _bg_overs(mid: int, inn: int, overs_0: list[int], audio: bool):
+            await generate_overs_commentary(mid, inn, overs_0)
+            if audio:
+                await generate_overs_audio(mid, inn, overs_0)
+
+        background_tasks.add_task(_bg_overs, match_id, innings, overs_0indexed, generate_audio)
+
+        return {
+            "match_id": match_id,
+            "status": "started",
+            "innings": innings,
+            "overs": overs_list,
+            "generate_audio": generate_audio,
+            "message": f"Commentary generation started for innings {innings} overs {overs_list}",
+        }
+
+    # ── Case 3: Entire match (background) ─────────────────────────
     if match["status"] == "generating":
         raise HTTPException(status_code=409, detail="Generation already in progress")
 
-    background_tasks.add_task(generate_match, match_id, body.start_over)
+    async def _bg_match(mid: int, audio: bool):
+        await generate_match(mid)
+        if audio:
+            await generate_match_audio(mid)
+
+    background_tasks.add_task(_bg_match, match_id, generate_audio)
 
     return {
         "match_id": match_id,
         "status": "started",
-        "start_over": body.start_over,
-        "message": "Commentary text generation started in background",
+        "generate_audio": generate_audio,
+        "message": "Commentary generation started for all deliveries",
     }
 
 
-class GenerateBallRequest(BaseModel):
-    languages: list[str] | None = None
-
-
-@app.post("/api/deliveries/{delivery_id}/commentaries/generate")
-async def api_generate_delivery_commentary(delivery_id: int, body: GenerateBallRequest):
-    """
-    Generate LLM commentary for a single delivery (no audio).
-
-    The delivery must have pre-computed context (run /precompute first).
-    Generates score update + ball commentary + any narrative triggers.
-
-    Runs synchronously — returns the generated commentary details.
-    """
-    delivery = await get_delivery_by_id(delivery_id)
-    if not delivery:
-        raise HTTPException(status_code=404, detail="Delivery not found")
-
-    result = await generate_ball_commentary(
-        match_id=delivery["match_id"],
-        ball_id=delivery_id,
-        languages=body.languages,
-    )
-
-    if result["status"] == "error":
-        raise HTTPException(status_code=400, detail=result["message"])
-
-    return result
-
-
 # ================================================================== #
-#  API: Audio generation (TTS) — separate from text
+#  API: Audio generation (TTS) — unified endpoint
 # ================================================================== #
 
-class GenerateAudioRequest(BaseModel):
-    language: str | None = None
-
-
-@app.post("/api/matches/{match_id}/commentaries/generate-audio")
-async def api_generate_match_audio(
+@app.post("/api/matches/{match_id}/generate_commentaries_audio")
+async def api_generate_commentaries_audio(
     match_id: int,
-    body: GenerateAudioRequest,
     background_tasks: BackgroundTasks,
+    innings: int | None = None,
+    overs: str | None = None,
+    commentary_id: int | None = None,
+    language: str | None = None,
 ):
     """
-    Generate TTS audio for all commentaries in a match that don't have audio yet.
+    Unified audio generation endpoint.
 
-    Optionally filter by language. Runs in the background.
+    Generates TTS audio for existing commentary text.
+    Commentary text must exist before audio can be generated.
+
+    Behaviour depends on query parameters:
+      - **No params**: generate audio for ALL pending commentaries (background).
+      - **overs** (comma-separated, 1-indexed) + **innings**: generate audio for those overs (background).
+        innings is required when overs is provided.
+      - **commentary_id** (no overs): generate audio for that single commentary (sync).
+      - **language**: optional filter — only generate audio for this language.
     """
     match = await get_match(match_id)
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
 
-    pending = await get_commentaries_pending_audio(match_id, language=body.language)
+    # ── Case 1: Single commentary (synchronous) ──────────────────
+    if commentary_id is not None and overs is None:
+        row = await get_commentary_by_id(commentary_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Commentary not found")
+        if row["match_id"] != match_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Commentary does not belong to this match",
+            )
+        if not row.get("text"):
+            raise HTTPException(
+                status_code=400,
+                detail="Commentary has no text. Generate commentary text first.",
+            )
+
+        result = await generate_commentary_audio(commentary_id)
+        if result["status"] == "not_found":
+            raise HTTPException(status_code=404, detail="Commentary not found")
+        return result
+
+    # ── Case 2: Specific overs (background) ──────────────────────
+    if overs is not None:
+        if innings is None:
+            raise HTTPException(
+                status_code=400,
+                detail="innings is required when overs is provided",
+            )
+        try:
+            overs_list = [int(o.strip()) for o in overs.split(",") if o.strip()]
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid overs format. Use comma-separated numbers (e.g. 1,2,3)",
+            )
+        if not overs_list:
+            raise HTTPException(status_code=400, detail="No valid overs provided")
+
+        overs_0indexed = [o - 1 for o in overs_list]
+
+        background_tasks.add_task(
+            generate_overs_audio, match_id, innings, overs_0indexed, language
+        )
+
+        return {
+            "match_id": match_id,
+            "status": "started",
+            "innings": innings,
+            "overs": overs_list,
+            "language": language,
+            "message": f"Audio generation started for innings {innings} overs {overs_list}",
+        }
+
+    # ── Case 3: All pending commentaries (background) ────────────
+    pending = await get_commentaries_pending_audio(match_id, language=language)
 
     if not pending:
         return {
             "match_id": match_id,
-            "language": body.language,
+            "language": language,
             "status": "nothing_to_do",
             "pending": 0,
             "message": "No commentaries pending audio generation",
         }
 
-    background_tasks.add_task(generate_match_audio, match_id, body.language)
+    background_tasks.add_task(generate_match_audio, match_id, language)
 
     return {
         "match_id": match_id,
-        "language": body.language,
+        "language": language,
         "status": "started",
         "pending": len(pending),
         "message": f"Audio generation started for {len(pending)} commentaries",
     }
-
-
-@app.post("/api/commentaries/{commentary_id}/generate-audio")
-async def api_generate_single_audio(commentary_id: int):
-    """
-    Generate TTS audio for a single commentary row.
-
-    Useful for retrying failed audio or generating audio on demand.
-    Runs synchronously — returns the result directly.
-    """
-    result = await generate_commentary_audio(commentary_id)
-
-    if result["status"] == "not_found":
-        raise HTTPException(status_code=404, detail="Commentary not found")
-
-    return result

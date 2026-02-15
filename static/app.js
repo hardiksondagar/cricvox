@@ -274,10 +274,17 @@ async function openMatch(matchId) {
             updateTimelinePlayBtn();
         } else {
             liveBadge.classList.add('hidden');
-            playBtn.classList.add('hidden');
             isLiveMode = false;
             updateLiveControls();
-            commentaryFeed.innerHTML = '<div class="feed-item feed-placeholder py-20 text-center"><p class="text-sm text-neutral-600">Commentary not generated yet</p></div>';
+            // Only show placeholder when we have no commentaries (avoid overwriting items from processCommentaries)
+            if (allCommentaries.length === 0) {
+                playBtn.classList.add('hidden');
+                commentaryFeed.innerHTML = '<div class="feed-item feed-placeholder py-20 text-center"><p class="text-sm text-neutral-600">Commentary not generated yet</p></div>';
+            } else {
+                playBtn.classList.remove('hidden');
+                playbackIndex = 0;
+                updateTimelinePlayBtn();
+            }
         }
 
         // Show timeline if we have data
@@ -335,16 +342,23 @@ function processCommentaries(commentaries) {
             if (d.batting_team) els.battingTeam.textContent = d.batting_team;
             if (d.bowling_team) els.bowlingTeam.textContent = d.bowling_team;
             if (d.target) els.target.textContent = d.target;
-        } else if (c.event_type === 'score_update') {
-            updateScoreboard(c.data);
-            addBallDot(c.data);
-            addBallFeedItem(c);
         } else if (c.event_type === 'commentary') {
             const d = c.data || {};
+            const bi = c.ball_info;
             if (d.is_narrative) {
                 addCommentary(c, allCommentaries.length - 1);
+            } else if (bi) {
+                // Use delivery data from ball_info for scoreboard + ball dot
+                try {
+                    updateScoreboard(bi);
+                    addBallDot(bi);
+                } catch (e) {
+                    console.warn('Scoreboard/ball-dot update failed:', e);
+                }
+                addBallFeedItem(c, bi);
             } else {
-                updateBallFeedCommentary(c, allCommentaries.length - 1);
+                // Fallback for commentary without ball_info
+                addCommentary(c, allCommentaries.length - 1);
             }
         } else if (c.event_type === 'match_end') {
             // Show match end
@@ -473,6 +487,16 @@ function playCurrentCommentary() {
     scrollToPlayingItem(playbackIndex);
     updateTimelineCursor();
 
+    // Sync scoreboard to this commentary's ball (updates when each commentary plays)
+    if (c.ball_id != null && ballIdToTimelineIdx[c.ball_id] !== undefined) {
+        const tlIdx = ballIdToTimelineIdx[c.ball_id];
+        const ball = timelineBalls[tlIdx];
+        if (ball) {
+            applyScoreboardSnapshot(ball);
+            rebuildCumulativeStatsForTimelineIdx(tlIdx);
+        }
+    }
+
     try {
         const a = new Audio(c.audio_url);
         a.volume = 0.8;
@@ -536,47 +560,25 @@ function scrollToPlayingItem(idx) {
 
 // === Scoreboard ===
 function updateScoreboard(d) {
-    els.totalRuns.textContent = d.total_runs;
-    els.wickets.textContent = d.wickets;
-    els.overs.textContent = d.overs;
+    if (d.total_runs != null) els.totalRuns.textContent = d.total_runs;
+    if (d.total_wickets != null) els.wickets.textContent = d.total_wickets;
+    if (d.overs) els.overs.textContent = d.overs;
     if (d.crr != null) els.crr.textContent = d.crr.toFixed(2);
     if (d.rrr != null) els.rrr.textContent = d.rrr.toFixed(2);
-    els.runsNeeded.textContent = d.runs_needed;
-    els.ballsRemaining.textContent = d.balls_remaining;
-    els.matchPhase.textContent = d.match_phase;
+    if (d.runs_needed != null) els.runsNeeded.textContent = d.runs_needed;
+    if (d.balls_remaining != null) els.ballsRemaining.textContent = d.balls_remaining;
+    if (d.match_phase) els.matchPhase.textContent = d.match_phase;
 
-    // Batter (on-strike) stats
-    if (d.batter) {
-        els.batterName.textContent = d.batter.name;
-        els.batterRuns.textContent = d.batter.runs;
-        els.batterBalls.textContent = d.batter.balls;
-    }
-
-    // Non-batter stats
-    if (d.non_batter) {
-        els.nonBatterName.textContent = d.non_batter.name;
-        els.nonBatterRuns.textContent = d.non_batter.runs;
-        els.nonBatterBalls.textContent = d.non_batter.balls;
-    }
-
-    // Bowler stats
-    if (d.bowler_stats) {
-        els.currentBowler.textContent = d.bowler_stats.name;
-        els.bowlerRuns.textContent = d.bowler_stats.runs;
-        els.bowlerWickets.textContent = d.bowler_stats.wickets;
-    } else {
-        els.currentBowler.textContent = d.bowler || '--';
-    }
+    // Player names from delivery data
+    if (d.batter) els.batterName.textContent = d.batter;
+    if (d.non_batter) els.nonBatterName.textContent = d.non_batter;
+    if (d.bowler) els.currentBowler.textContent = d.bowler;
 
     if (d.crr != null && d.rrr != null) updateRunRateBars(d.crr, d.rrr);
 
-    if (d.partnership_runs !== undefined) {
-        els.partnershipRuns.textContent = d.partnership_runs;
-        els.partnershipBalls.textContent = d.partnership_balls || 0;
-    }
-
+    const ballRuns = d.ball_runs ?? ((d.runs || 0) + (d.extras || 0));
     totalBalls++;
-    if (d.ball_runs === 0 && !d.is_wicket) totalDotBalls++;
+    if (ballRuns === 0 && !d.is_wicket) totalDotBalls++;
     if (d.is_six) totalBoundaries.sixes++;
     else if (d.is_boundary) totalBoundaries.fours++;
     updateStats();
@@ -585,6 +587,133 @@ function updateScoreboard(d) {
         els.totalRuns.classList.add('flash');
         setTimeout(() => els.totalRuns.classList.remove('flash'), 600);
     }
+}
+
+/**
+ * Apply score snapshot from a timeline ball (e.g. when scrubbing).
+ * Updates display only; does not increment cumulative stats.
+ */
+function applyScoreboardSnapshot(ball) {
+    if (!ball) return;
+    if (ball.batting_team != null) els.battingTeam.textContent = ball.batting_team;
+    if (ball.bowling_team != null) els.bowlingTeam.textContent = ball.bowling_team;
+    if (ball.total_runs != null) els.totalRuns.textContent = ball.total_runs;
+    if (ball.total_wickets != null) els.wickets.textContent = ball.total_wickets;
+    if (ball.overs != null) els.overs.textContent = ball.overs;
+    if (ball.crr != null) els.crr.textContent = ball.crr.toFixed(2);
+    if (ball.rrr != null) els.rrr.textContent = ball.rrr.toFixed(2);
+    if (ball.runs_needed != null) els.runsNeeded.textContent = ball.runs_needed;
+    if (ball.balls_remaining != null) els.ballsRemaining.textContent = ball.balls_remaining;
+    if (ball.match_phase != null) els.matchPhase.textContent = ball.match_phase;
+    els.batterName.textContent = ball.batter ?? '';
+    els.nonBatterName.textContent = ball.non_batter ?? '';
+    els.currentBowler.textContent = ball.bowler ?? '';
+    if (ball.crr != null && ball.rrr != null) updateRunRateBars(ball.crr, ball.rrr);
+}
+
+/**
+ * Get ball display config for timeline ball b.
+ */
+function getBallDisplayFromTimeline(b) {
+    const ballRuns = (b.runs || 0) + (b.extras || 0);
+    const et = (b.extras_type || '').toLowerCase();
+    if (b.is_wicket) return { text: 'W', className: 'wicket', runs: 0 };
+    if (et === 'wide' || et === 'wides') return { text: ballRuns > 0 ? `${ballRuns}wd` : 'wd', className: 'extra', runs: ballRuns };
+    if (et === 'noball' || et === 'no_ball') return { text: ballRuns > 0 ? `${ballRuns}nb` : 'nb', className: 'extra', runs: ballRuns };
+    if (ballRuns === 0) return { text: '0', className: 'runs-0', runs: 0 };
+    if (b.is_six) return { text: '6', className: 'runs-6', runs: 6 };
+    if (b.is_boundary) return { text: '4', className: 'runs-4', runs: 4 };
+    const r = Math.min(ballRuns, 4);
+    return { text: String(ballRuns), className: `runs-${r}`, runs: ballRuns };
+}
+
+/**
+ * Get ball display config for commentary delivery d.
+ */
+function getBallDisplayFromDelivery(d) {
+    const ballRuns = d.ball_runs ?? ((d.runs || 0) + (d.extras || 0));
+    const et = (d.extras_type || '').toLowerCase();
+    if (d.is_wicket) return { text: 'W', className: 'wicket', runs: 0 };
+    if (et === 'wide' || et === 'wides') return { text: ballRuns > 0 ? `${ballRuns}wd` : 'wd', className: 'extra', runs: ballRuns };
+    if (et === 'noball' || et === 'no_ball') return { text: ballRuns > 0 ? `${ballRuns}nb` : 'nb', className: 'extra', runs: ballRuns };
+    if (ballRuns === 0) return { text: '0', className: 'runs-0', runs: 0 };
+    if (d.is_six) return { text: '6', className: 'runs-6', runs: 6 };
+    if (d.is_boundary) return { text: '4', className: 'runs-4', runs: 4 };
+    const r = Math.min(ballRuns, 4);
+    return { text: String(ballRuns), className: `runs-${r}`, runs: ballRuns };
+}
+
+/**
+ * Render This Over ball indicator: 6 fixed slots (with placeholders for empty), extras on new line.
+ */
+function renderBallIndicator() {
+    const mainBalls = currentOverBalls.slice(0, 6);
+    const extraBalls = currentOverBalls.slice(6);
+
+    let html = '<div class="this-over-row">';
+    for (let i = 0; i < 6; i++) {
+        const ball = mainBalls[i];
+        if (ball) {
+            html += `<div class="ball-dot ${ball.className}">${ball.text}</div>`;
+        } else {
+            html += '<div class="ball-dot ball-placeholder" aria-hidden="true"></div>';
+        }
+    }
+    html += '</div>';
+    if (extraBalls.length) {
+        html += '<div class="this-over-row this-over-extras">';
+        for (const ball of extraBalls) {
+            html += `<div class="ball-dot ${ball.className}">${ball.text}</div>`;
+        }
+        html += '</div>';
+    }
+    ballIndicator.innerHTML = html;
+}
+
+/**
+ * Rebuild cumulative stats and ball indicator for balls 0..idx (when scrubbing).
+ */
+function rebuildCumulativeStatsForTimelineIdx(idx) {
+    currentOverBalls = [];
+    currentOverRuns = 0;
+    totalBoundaries = { fours: 0, sixes: 0 };
+    totalExtras = 0;
+    totalDotBalls = 0;
+    totalBalls = 0;
+    recentOversData = [];
+    ballIndicator.innerHTML = '';
+
+    for (let i = 0; i <= idx && i < timelineBalls.length; i++) {
+        const b = timelineBalls[i];
+        const ballRuns = (b.runs || 0) + (b.extras || 0);
+        const oversStr = b.overs || `${b.over}.${b.ball}`;
+        const parts = oversStr.split('.');
+        const ballNum = parseInt(parts[1] || 0, 10);
+
+        if ((ballNum === 1 || ballNum === 0) && currentOverBalls.length >= 6) {
+            const overNum = parseInt(parts[0] || 0, 10);
+            if (overNum > 0) {
+                recentOversData.unshift({ over: overNum, runs: currentOverRuns });
+                if (recentOversData.length > 5) recentOversData.pop();
+            }
+            currentOverBalls = [];
+            currentOverRuns = 0;
+        }
+
+        totalBalls++;
+        if (ballRuns === 0 && !b.is_wicket) totalDotBalls++;
+        if (b.is_six) totalBoundaries.sixes++;
+        else if (b.is_boundary) totalBoundaries.fours++;
+        totalExtras += b.extras || 0;
+
+        currentOverBalls.push(getBallDisplayFromTimeline(b));
+        currentOverRuns += currentOverBalls[currentOverBalls.length - 1].runs;
+    }
+
+    els.overRuns.textContent = currentOverRuns;
+    updateStats();
+    renderRecentOvers();
+    renderBallIndicator();
 }
 
 function updateRunRateBars(crr, rrr) {
@@ -628,23 +757,13 @@ function addBallDot(d) {
         if (overNum > 0) addRecentOver(overNum, currentOverRuns);
         currentOverBalls = [];
         currentOverRuns = 0;
-        ballIndicator.innerHTML = '';
     }
 
-    const dot = document.createElement('div');
-    dot.className = 'ball-dot';
-    let runs = 0;
-
-    if (d.is_wicket) { dot.classList.add('wicket'); dot.textContent = 'W'; }
-    else if (d.ball_runs === 0) { dot.classList.add('runs-0'); dot.textContent = '0'; }
-    else if (d.is_six) { dot.classList.add('runs-6'); dot.textContent = '6'; runs = 6; }
-    else if (d.is_boundary) { dot.classList.add('runs-4'); dot.textContent = '4'; runs = 4; }
-    else { const cls = d.ball_runs <= 3 ? `runs-${d.ball_runs}` : 'runs-4'; dot.classList.add(cls); dot.textContent = d.ball_runs; runs = d.ball_runs; }
-
-    currentOverRuns += runs;
+    const display = getBallDisplayFromDelivery(d);
+    currentOverBalls.push(display);
+    currentOverRuns += display.runs;
     els.overRuns.textContent = currentOverRuns;
-    ballIndicator.appendChild(dot);
-    currentOverBalls.push(d.ball_runs);
+    renderBallIndicator();
 }
 
 function addRecentOver(num, runs) {
@@ -670,26 +789,24 @@ function renderRecentOvers() {
 // === Commentary ===
 function getBallIndicatorClass(ballInfo, data) {
     if (!ballInfo) return 'ball-0';
-    const bd = ballInfo.data || {};
-    if (data.is_wicket || bd.is_wicket) return 'ball-W';
-    if (data.is_six || bd.is_six) return 'ball-6';
-    if (data.is_boundary || bd.is_boundary) return 'ball-4';
-    const runs = data.ball_runs ?? (bd.runs || 0) + (bd.extras || 0);
+    if (ballInfo.is_wicket || data.is_wicket) return 'ball-W';
+    if (ballInfo.is_six || data.is_six) return 'ball-6';
+    if (ballInfo.is_boundary || data.is_boundary) return 'ball-4';
+    const runs = ballInfo.ball_runs ?? data.ball_runs ?? (ballInfo.runs || 0) + (ballInfo.extras || 0);
     if (runs >= 1 && runs <= 3) return `ball-${runs}`;
-    if (bd.extras_type === 'wide') return 'ball-wd';
-    if (bd.extras_type === 'noball') return 'ball-nb';
+    if (ballInfo.extras_type === 'wide') return 'ball-wd';
+    if (ballInfo.extras_type === 'noball') return 'ball-nb';
     return 'ball-0';
 }
 
 function getBallIndicatorLabel(ballInfo, data) {
     if (!ballInfo) return '·';
-    const bd = ballInfo.data || {};
-    if (data.is_wicket || bd.is_wicket) return 'W';
-    if (data.is_six || bd.is_six) return '6';
-    if (data.is_boundary || bd.is_boundary) return '4';
-    const runs = data.ball_runs ?? (bd.runs || 0) + (bd.extras || 0);
-    if (bd.extras_type === 'wide') return 'wd';
-    if (bd.extras_type === 'noball') return 'nb';
+    if (ballInfo.is_wicket || data.is_wicket) return 'W';
+    if (ballInfo.is_six || data.is_six) return '6';
+    if (ballInfo.is_boundary || data.is_boundary) return '4';
+    const runs = ballInfo.ball_runs ?? data.ball_runs ?? (ballInfo.runs || 0) + (ballInfo.extras || 0);
+    if (ballInfo.extras_type === 'wide') return 'wd';
+    if (ballInfo.extras_type === 'noball') return 'nb';
     return `${runs}`;
 }
 
@@ -708,35 +825,27 @@ function getNarrativeIcon(type) {
 }
 
 /**
- * Add a feed item for a ball from its score_update event.
- * Shows ball info immediately; commentary text fills in later via updateBallFeedCommentary.
+ * Add a feed item for a ball from its commentary event.
+ * Uses ball_info for ball details and commentary text directly.
  */
-function addBallFeedItem(c) {
+function addBallFeedItem(c, bi) {
     const placeholder = commentaryFeed.querySelector('.feed-placeholder');
     if (placeholder) placeholder.remove();
 
     const d = c.data || {};
-    const ballInfo = c.ball_info;
     const ballId = c.ball_id;
+    const idx = allCommentaries.length - 1;
 
     const item = document.createElement('div');
-    item.className = 'feed-item feed-ball-pending';
+    item.className = 'feed-item';
     if (ballId) item.setAttribute('data-ball-id', ballId);
+    item.setAttribute('data-idx', idx);
+    if (d.is_pivot) item.classList.add('pivot');
 
-    const over = ballInfo ? `${ballInfo.over}.${ballInfo.ball}` : '';
-    const batsmanBowler = ballInfo ? `${ballInfo.batter} vs ${ballInfo.bowler}` : '';
-    const indicatorClass = getBallIndicatorClass(ballInfo, d);
-    const indicatorLabel = getBallIndicatorLabel(ballInfo, d);
-
-    // Short result label shown until commentary text arrives
-    let resultText = '';
-    if (d.is_wicket) resultText = 'WICKET';
-    else if (d.is_six) resultText = '6 runs';
-    else if (d.is_boundary) resultText = '4 runs';
-    else {
-        const runs = d.ball_runs ?? 0;
-        resultText = runs === 0 ? 'Dot ball' : `${runs} run${runs !== 1 ? 's' : ''}`;
-    }
+    const over = bi ? `${bi.over}.${bi.ball}` : '';
+    const batsmanBowler = bi ? `${(bi.batter || '')} vs ${(bi.bowler || '')}` : '';
+    const indicatorClass = getBallIndicatorClass(bi, bi);
+    const indicatorLabel = getBallIndicatorLabel(bi, bi);
 
     item.innerHTML = `
         <div class="feed-ball-col">
@@ -747,40 +856,15 @@ function addBallFeedItem(c) {
             <div class="feed-meta">
                 <span class="feed-over">${batsmanBowler}</span>
             </div>
-            <div class="feed-text feed-text-pending">${resultText}</div>
+            <div class="feed-text"></div>
         </div>
     `;
+    const textEl = item.querySelector('.feed-text');
+    if (textEl) textEl.textContent = c.text || '';
 
     commentaryFeed.insertBefore(item, commentaryFeed.firstChild);
     while (commentaryFeed.children.length > 100) {
         commentaryFeed.removeChild(commentaryFeed.lastChild);
-    }
-}
-
-/**
- * Update an existing ball feed item with commentary text.
- * Finds the feed item by ball_id and replaces the pending text.
- */
-function updateBallFeedCommentary(c, idx) {
-    const d = c.data || {};
-    const ballId = c.ball_id;
-
-    // Find the feed item created by addBallFeedItem for this ball
-    const existing = ballId ? commentaryFeed.querySelector(`[data-ball-id="${ballId}"]`) : null;
-
-    if (existing) {
-        existing.classList.remove('feed-ball-pending');
-        existing.setAttribute('data-idx', idx);
-        if (d.is_pivot) existing.classList.add('pivot');
-
-        const textEl = existing.querySelector('.feed-text');
-        if (textEl && c.text) {
-            textEl.classList.remove('feed-text-pending');
-            textEl.textContent = c.text;
-        }
-    } else {
-        // Fallback: no matching score_update item (shouldn't happen normally)
-        addCommentary(c, idx);
     }
 }
 
@@ -830,7 +914,6 @@ function addCommentary(c, idx) {
 
 function clearCommentary() {
     commentaryFeed.innerHTML = '';
-    ballIndicator.innerHTML = '';
     currentOverBalls = [];
     currentOverRuns = 0;
     totalBoundaries = { fours: 0, sixes: 0 };
@@ -845,6 +928,7 @@ function clearCommentary() {
     updateStats();
     renderRecentOvers();
     els.overRuns.textContent = '0';
+    renderBallIndicator();
 }
 
 
@@ -881,6 +965,7 @@ async function fetchTimeline(matchId) {
                     ...b,
                     innings: inn.innings_number,
                     batting_team: inn.batting_team,
+                    bowling_team: inn.bowling_team,
                 });
             }
         }
@@ -942,19 +1027,26 @@ function renderInningsLabels() {
     }).join('');
 }
 
+function getTimelineBadgeLabel(b) {
+    if (b.is_wicket) return { badge: 'badge-wicket', text: 'W', title: 'Wicket' };
+    if (b.is_six) return { badge: 'badge-six', text: '6', title: 'Six' };
+    if (b.is_boundary) return { badge: 'badge-four', text: '4', title: 'Four' };
+    const et = (b.extras_type || '').toLowerCase();
+    const runs = (b.runs || 0) + (b.extras || 0);
+    if (et === 'wide' || et === 'wides') return { badge: 'badge-dot', text: runs > 0 ? `${runs}wd` : 'wd', title: 'Wide' };
+    if (et === 'noball' || et === 'no_ball') return { badge: 'badge-dot', text: runs > 0 ? `${runs}nb` : 'nb', title: 'No ball' };
+    return { badge: 'badge-dot', text: String(runs), title: `${runs} run${runs !== 1 ? 's' : ''}` };
+}
+
 function renderTimelineBadges() {
     const total = timelineBalls.length;
     if (!total) return;
 
-    // Only show wickets and sixes — fours are too frequent and clutter the bar
     let html = '';
     timelineBalls.forEach((b, i) => {
         const pct = (i / (total - 1)) * 100;
-        if (b.is_wicket) {
-            html += `<div class="timeline-badge badge-wicket" style="left:${pct}%" title="Wicket"></div>`;
-        } else if (b.is_six) {
-            html += `<div class="timeline-badge badge-six" style="left:${pct}%" title="Six"></div>`;
-        }
+        const { badge, text, title } = getTimelineBadgeLabel(b);
+        html += `<div class="timeline-badge ${badge}" data-timeline-idx="${i}" style="left:${pct}%" title="${title}">${text}</div>`;
     });
     tlBadges.innerHTML = html;
 }
@@ -1022,14 +1114,24 @@ function updateTimelineCursor() {
     if (!total) return;
 
     const pos = getTimelinePositionFromPlayback();
+
+    // Remove active state from all badges
+    tlBadges.querySelectorAll('.timeline-badge.active').forEach(el => el.classList.remove('active'));
+
     if (pos < 0) {
         tlCursor.classList.add('hidden');
         return;
     }
 
-    tlCursor.classList.remove('hidden');
-    const pct = (pos / (total - 1)) * 100;
-    tlCursor.style.left = `${pct}%`;
+    // Highlight badge at current position instead of showing default cursor
+    const activeBadge = tlBadges.querySelector(`.timeline-badge[data-timeline-idx="${pos}"]`);
+    if (activeBadge) {
+        activeBadge.classList.add('active');
+        tlCursor.classList.add('hidden');
+    } else {
+        tlCursor.classList.remove('hidden');
+        tlCursor.style.left = `${(pos / (total - 1)) * 100}%`;
+    }
 }
 
 function updateTimelinePlayBtn() {
@@ -1116,21 +1218,19 @@ function scrubToPosition(e) {
 
     // Move cursor visually immediately
     const total = timelineBalls.length;
-    const pct = (idx / (total - 1)) * 100;
+    const pct = (total > 1 ? (idx / (total - 1)) * 100 : 0);
     tlCursor.classList.remove('hidden');
     tlCursor.style.left = `${pct}%`;
+
+    // Update scoreboard to show state at this timeline position
+    applyScoreboardSnapshot(ball);
+    rebuildCumulativeStatsForTimelineIdx(idx);
 
     // Find commentary for this ball
     const commentaryIndices = ballIdToCommentaryIndices[ball.ball_id];
     if (commentaryIndices && commentaryIndices.length) {
-        // Find first commentary event (not score_update) for this ball
+        // Find first commentary event for this ball
         let targetIdx = commentaryIndices[0];
-        for (const ci of commentaryIndices) {
-            if (allCommentaries[ci] && allCommentaries[ci].event_type === 'commentary') {
-                targetIdx = ci;
-                break;
-            }
-        }
         playFrom(targetIdx);
 
         // Exit live mode if scrubbing backward
@@ -1141,8 +1241,13 @@ function scrubToPosition(e) {
                 updateLiveControls();
             }
         }
+    } else {
+        // No commentary — stop playback, keep scoreboard at scrubbed position
+        pausePlayback();
+        playbackIndex = -1;
+        highlightPlayingItem(-1);
+        updateTimelinePlayBtn();
     }
-    // If no commentary, just update visual cursor (don't play)
 }
 
 

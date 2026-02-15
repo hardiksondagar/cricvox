@@ -38,6 +38,27 @@
 .ball-dot.runs-6 { background: rgba(139,92,246,0.15); color: #a78bfa; }
 .ball-dot.wicket { background: rgba(239,68,68,0.15); color: #f87171; }
 .ball-dot.extra  { background: rgba(251,146,60,0.12); color: #fb923c; }
+.ball-dot.ball-placeholder { background: rgba(255,255,255,0.04); color: transparent; border: 1px dashed rgba(255,255,255,0.08); }
+
+/* This Over: fixed width, 6 balls + extras row; height fits 2 rows so no layout shift */
+.this-over-balls {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    width: 210px;
+    min-height: 68px;
+    flex-shrink: 0;
+}
+.this-over-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: nowrap;
+    justify-content: left;
+}
+.this-over-row:not(.this-over-extras) .ball-dot { flex: 1; min-width: 0; aspect-ratio: 1; width: auto; height: auto; }
+.this-over-extras { flex-wrap: wrap; }
+.this-over-extras .ball-dot { flex: 0 0 28px; width: 28px; height: 28px; }
 
 /* Commentary feed items */
 .feed-item {
@@ -428,16 +449,46 @@
 .timeline-badge {
     position: absolute;
     top: 50%;
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     transform: translate(-50%, -50%);
-    opacity: 0.7;
+    opacity: 0.85;
+    pointer-events: auto;
     transition: opacity 0.15s ease, transform 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
 }
 
-.timeline-badge.badge-wicket   { background: #f87171; box-shadow: 0 0 4px rgba(248,113,113,0.4); }
-.timeline-badge.badge-six      { background: #a78bfa; box-shadow: 0 0 4px rgba(167,139,250,0.3); }
+.timeline-badge:hover {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 1;
+    z-index:999;
+}
+
+.timeline-badge.badge-wicket   { background: rgba(239,68,68,0.9); color: #fff; box-shadow: 0 0 4px rgba(248,113,113,0.4); }
+.timeline-badge.badge-six      { background: rgba(139,92,246,0.9); color: #fff; box-shadow: 0 0 4px rgba(167,139,250,0.3); }
+.timeline-badge.badge-four     { background: rgba(16,185,129,0.9); color: #fff; box-shadow: 0 0 4px rgba(52,211,153,0.3); }
+.timeline-badge.badge-dot      { width: 6px; height: 6px; background: rgba(255,255,255,0.35); font-size: 0; box-shadow: none; opacity: 0.6; color: #0a0a0a; }
+
+.timeline-badge.active {
+    transform: translate(-50%, -50%) scale(1.25);
+    opacity: 1;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5), 0 0 0 1px #fff;
+    z-index: 999;
+}
+.timeline-badge.active.badge-dot {
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+    font-size: 0.65rem;
+}
 
 /* Innings separator — rendered as a dot like wicket/six badges */
 .timeline-innings-sep {
@@ -470,9 +521,9 @@
     margin-top: -7px;
     margin-left: -7px;
     border-radius: 50%;
-    background: #34d399;
+    background: #fff;
     border: 2px solid #0a0a0a;
-    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
     transition: left 0.2s ease;
     pointer-events: none;
     z-index: 5;
