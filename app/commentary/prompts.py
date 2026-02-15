@@ -46,7 +46,7 @@ The voice engine reads these formatting cues naturally:
 
 --- EXAMPLES ---
   Wicket:    "[gasps] OUT! [excited] Bowled him! The stumps are SHATTERED!"
-  Wicket 2:  "[gasps] CAUGHT! [dramatic tone] The set batsman… is GONE."
+  Wicket 2:  "[gasps] CAUGHT! [dramatic tone] The set batter… is GONE."
   Six:       "[shouts] SIX! That is MASSIVE!"
   Four:      "[excited] FOUR! He's timing it beautifully now!"
   Pressure:  "[tense] Dot ball. [hushed] Four in a row… the squeeze is on."
@@ -97,7 +97,7 @@ WHAT YOU KNOW (use this):
 - Player stats: runs scored, balls faced, milestones
 - Match phase: powerplay, middle overs, death overs
 - Momentum: recent scoring, consecutive dots, back-to-back boundaries
-- Transitions: new bowler, strike change, new batsman
+- Transitions: new bowler, strike change, new batter
 
 WHAT YOU DON'T KNOW (never make up):
 - Delivery type (length, line, swing, spin, pace)
@@ -143,15 +143,15 @@ Drama + significance. Use the wicket type (bowled/caught/lbw/run_out) — that I
 THE WICKET IS THE ONLY STORY. Do NOT mention dot balls, pressure, boundary droughts, run rates, or extras.
 The entire commentary must be about the dismissal, who's out, what it means for the match.
 - "OUT! Bowled him! The stumps are shattered. India strike early and what a time to get that wicket!"
-- "CAUGHT! That's a huge wicket. The set batsman is gone for 52 and South Africa will be worried."
-- "Run out! Terrible mix-up between the batsmen. That's a gift for the fielding side."
+- "CAUGHT! That's a huge wicket. The set batter is gone for 52 and South Africa will be worried."
+- "Run out! Terrible mix-up between the batters. That's a gift for the fielding side."
 - "LBW! Trapped in front. The umpire has no hesitation. A big, big moment in this game."
 - "Gone! Caught behind. The keeper pouches it. India are pumped!"
 
 EXTRAS (1 sentence, 8-15 words):
 Brief. Mention the free runs and impact.
 - "Wide! Free runs. The bowler won't want that in a final."
-- "No ball! And a free hit coming up. Gift for the batsmen."
+- "No ball! And a free hit coming up. Gift for the batters."
 - "Leg byes. One added to the total."
 
 PRESSURE BUILDER (1 sentence, 5-15 words):
@@ -169,7 +169,7 @@ Runs off the over + what it means.
 TRANSITIONS — weave naturally when the context mentions them:
 - NEW BOWLER: "Bumrah into the attack now." Then state the result.
 - STRIKE CHANGE: "De Kock on strike." Then state the result.
-- NEW BATSMAN: "Kohli walks out to the middle. India need him big time."
+- NEW BATTER: "Kohli walks out to the middle. India need him big time."
 
 CONTEXT RULES — STRICTLY follow. Ask yourself: "does this phrase actually fit RIGHT NOW?"
 
@@ -229,19 +229,19 @@ LAST OVER (over 20):
 
 WICKET FALLS — what to say and not say:
 - ALWAYS: mention the wicket type (bowled/caught/lbw/run out)
-- ALWAYS: mention the dismissed batsman's score if they contributed (15+ runs)
+- ALWAYS: mention the dismissed batter's score if they contributed (15+ runs)
 - OK: score at fall of wicket ("South Africa 45/3")
-- OK: "top-order batsman gone" if wickets 1-3, "set batsman gone" if 30+ runs
+- OK: "top-order batter gone" if wickets 1-3, "set batter gone" if 30+ runs
 - After 3+ wickets in quick succession: NOW you can say "collapse", "in trouble"
 - After 1 wicket in powerplay: it's significant but not a crisis — don't say "in deep trouble"
 - NEVER: "the required rate is now X" right after a wicket in overs 0-10
 
-NEW BATSMAN:
+NEW BATTER:
 - Mention who's coming in — ONCE
 - If it's a key player: "Kohli walks in. Big moment." — brief
 - If it's lower order (wicket 7+): "Tail is exposed now."
-- Their first 3-4 balls: just state the result, no judgment
-- Do NOT keep calling them "the new man" after 5+ balls
+- Their first 3-4 deliveries: just state the result, no judgment
+- Do NOT keep calling them "the new man" after 5+ deliveries
 
 PARTNERSHIP BUILDING:
 - First mention at 25+ run stand
@@ -278,7 +278,7 @@ ONE-SIDED GAME — read MATCH SITUATION carefully:
 - If it says "TIGHT" or "LAST OVER THRILLER":
   - THIS is where real tension lives. Now "every run counts" is valid.
 
-SET BATSMAN PLAYING WELL (30+ runs, SR > 120):
+SET BATTER PLAYING WELL (30+ runs, SR > 120):
 - OK: "He's in complete control." "This is his day."
 - Celebrate their boundaries but don't oversell every single one
 - When they score their 50: proper celebration, mention balls faced
@@ -322,19 +322,19 @@ BOWLING SPELL:
 - Say it ONCE, then the context is set. Don't keep repeating it.
 
 "SEARCHING FOR RHYTHM" / "SETTLING IN":
-- Valid: new batsman, first 4-5 balls only
-- Invalid: after 10+ balls, on every dot ball they face
+- Valid: new batter, first 4-5 deliveries only
+- Invalid: after 10+ deliveries, on every dot ball they face
 
 "THE BOWLER WON'T LIKE THAT":
 - Valid: first boundary off a bowler, or a big over conceded
 - Invalid: third four in an over — say something different
 
 "CRUCIAL WICKET":
-- Valid: set batsman out (30+ runs), last recognized pair, death overs
+- Valid: set batter out (30+ runs), last recognized pair, death overs
 - Invalid: tail-ender out when game is already decided
 
 "WHAT AN INNINGS":
-- Valid: when a batsman is dismissed after 50+ runs
+- Valid: when a batter is dismissed after 50+ runs
 - Invalid: when they're out for 15
 
 "THE CROWD IS ON ITS FEET":
@@ -409,7 +409,7 @@ def get_system_prompt(language: str = "en") -> str:
 
 
 USER_PROMPT_TEMPLATE = """{batting_team} {runs}/{wickets} ({overs} ov) | Target: {target} | Need {runs_needed} off {balls_remaining}
-CRR: {crr} | RRR: {rrr} | {batsman} vs {bowler}
+CRR: {crr} | RRR: {rrr} | {batter} vs {bowler}
 
 Ball: {event_description}
 Type: {branch} | Pivot: {is_pivot}
@@ -425,7 +425,7 @@ Commentary:"""
 def build_event_description(ball) -> str:
     """Build a terse factual description — bare score data only."""
     if ball.is_wicket:
-        dismissed = ball.dismissal_batsman or ball.batsman
+        dismissed = ball.dismissal_batter or ball.batter
         wtype = ball.wicket_type or "out"
         return f"WICKET — {dismissed} {wtype}"
 
@@ -504,7 +504,7 @@ def format_user_prompt(state, ball, logic_result, language: str = "en") -> str:
         balls_remaining=state.balls_remaining,
         crr=state.crr,
         rrr=state.rrr,
-        batsman=ball.batsman,
+        batter=ball.batter,
         event_description=event_desc,
         bowler=ball.bowler,
         branch=logic_result.branch.value,
@@ -527,7 +527,7 @@ These are NOT ball-by-ball calls. These are the bigger picture moments:
 - First innings end — summarize the innings, key performers, what the score means
 - Second innings start — the chase begins, the target, the challenge ahead
 - End of over — summarize what happened, the state of play
-- New batsman — who's walking in, what they need to do
+- New batter — who's walking in, what they need to do
 - Phase change — powerplay ending, death overs starting, shift in gear
 - Milestone — celebrate the achievement
 - Match result — the final word, emotion, significance
@@ -646,12 +646,12 @@ Summarize the over briefly. Mention the state of play. 2-3 sentences, analytical
     # ------------------------------------------------------------------ #
     #  NEW BATSMAN
     # ------------------------------------------------------------------ #
-    "new_batsman": """MOMENT: New batsman walks in
+    "new_batter": """MOMENT: New batter walks in
 
 {batting_team} {runs}/{wickets} ({overs} ov) | Target: {target}
 CRR: {crr} | RRR: {rrr} | Need {runs_needed} off {balls_remaining}
 
-New batsman: {new_batsman} (batting at #{position})
+New batter: {new_batter} (batting at #{position})
 Wickets down: {wickets}
 {partnership_broken}
 {situation}
@@ -659,7 +659,7 @@ Wickets down: {wickets}
 Recent commentary:
 {recent_commentary}
 
-Introduce the new batsman. What's the situation they walk into? 1-2 sentences. Don't repeat the wicket details — those were already covered.""",
+Introduce the new batter. What's the situation they walk into? 1-2 sentences. Don't repeat the wicket details — those were already covered.""",
 
     # ------------------------------------------------------------------ #
     #  PHASE CHANGE
@@ -684,7 +684,7 @@ Mark the transition. Summarize the phase that ended, what's needed in the next. 
 
 {batting_team} {runs}/{wickets} ({overs} ov) | Target: {target}
 
-{batsman_name}: {batsman_runs}({batsman_balls}) [{batsman_fours}x4, {batsman_sixes}x6] SR {batsman_sr}
+{batter_name}: {batter_runs}({batter_balls}) [{batter_fours}x4, {batter_sixes}x6] SR {batter_sr}
 {situation}
 
 Recent commentary:
@@ -706,20 +706,20 @@ def build_narrative_prompt(moment_type: str, state=None, language: str = "en", *
         recent_lines = state.commentary_history[-5:]
         recent_commentary = "\n".join(f"- {line}" for line in recent_lines)
 
-    # Build batsmen at crease
-    batsmen_at_crease = ""
+    # Build batters at crease
+    batters_at_crease = ""
     if state:
-        active_batsmen = [
-            b for b in state.batsmen.values() if not b.is_out
+        active_batters = [
+            b for b in state.batters.values() if not b.is_out
         ]
-        if active_batsmen:
-            parts = [f"{b.name}: {b.runs}({b.balls_faced})" for b in active_batsmen]
-            batsmen_at_crease = "At the crease: " + ", ".join(parts)
+        if active_batters:
+            parts = [f"{b.name}: {b.runs}({b.balls_faced})" for b in active_batters]
+            batters_at_crease = "At the crease: " + ", ".join(parts)
 
     # Common format args from state (if available)
     format_args = {
         "recent_commentary": recent_commentary,
-        "batsmen_at_crease": batsmen_at_crease,
+        "batsmen_at_crease": batters_at_crease,
     }
     if state:
         format_args.update({

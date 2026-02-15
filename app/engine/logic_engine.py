@@ -82,11 +82,11 @@ class LogicEngine:
         elif state.is_new_bowler:
             notes.append(f"Bowling change: {ball.bowler} replaces {state.previous_bowler}")
 
-        if state.is_new_batsman and state.new_batsman_name:
-            pos = state.batsmen[state.new_batsman_name].position if state.new_batsman_name in state.batsmen else self._next_position(state)
-            notes.append(f"NEW BATSMAN: {state.new_batsman_name} walks in at #{pos}")
+        if state.is_new_batter and state.new_batter_name:
+            pos = state.batters[state.new_batter_name].position if state.new_batter_name in state.batters else self._next_position(state)
+            notes.append(f"NEW BATTER: {state.new_batter_name} walks in at #{pos}")
         elif state.is_strike_change and not state.is_new_over:
-            notes.append(f"Strike rotated: {ball.batsman} now facing (was {state.previous_batsman})")
+            notes.append(f"Strike rotated: {ball.batter} now facing (was {state.previous_batter})")
 
         # ============================================================== #
         #  2. MATCH SITUATION — always present
@@ -105,34 +105,34 @@ class LogicEngine:
         # ============================================================== #
         #  3. BATSMAN — current form, struggles, milestones
         # ============================================================== #
-        batsman_name = ball.batsman
-        if batsman_name in state.batsmen:
-            batter = state.batsmen[batsman_name]
+        batter_name = ball.batter
+        if batter_name in state.batters:
+            batter = state.batters[batter_name]
             if batter.balls_faced == 0:
-                notes.append(f"{batsman_name} on strike, yet to face a ball")
+                notes.append(f"{batter_name} on strike, yet to face a delivery")
             elif batter.runs == 0 and batter.balls_faced > 0:
-                notes.append(f"{batsman_name} struggling: 0({batter.balls_faced})")
+                notes.append(f"{batter_name} struggling: 0({batter.balls_faced})")
             else:
-                desc = f"{batsman_name}: {batter.runs}({batter.balls_faced}) SR {batter.strike_rate}"
+                desc = f"{batter_name}: {batter.runs}({batter.balls_faced}) SR {batter.strike_rate}"
                 if batter.fours or batter.sixes:
                     desc += f" [{batter.fours}x4, {batter.sixes}x6]"
                 notes.append(desc)
 
             # Dot ball struggle
             if batter.balls_faced >= 10 and batter.dot_percentage >= 60:
-                notes.append(f"{batsman_name} dot% = {batter.dot_percentage}% — struggling to rotate")
+                notes.append(f"{batter_name} dot% = {batter.dot_percentage}% — struggling to rotate")
 
             # Milestones
             if batter.approaching_fifty:
-                notes.append(f"MILESTONE: {batsman_name} approaching 50 (on {batter.runs})")
+                notes.append(f"MILESTONE: {batter_name} approaching 50 (on {batter.runs})")
             elif batter.approaching_hundred:
-                notes.append(f"MILESTONE: {batsman_name} approaching 100 (on {batter.runs})")
+                notes.append(f"MILESTONE: {batter_name} approaching 100 (on {batter.runs})")
 
-        # Non-striker
-        if ball.non_striker and ball.non_striker in state.batsmen:
-            ns = state.batsmen[ball.non_striker]
+        # Non-batter
+        if ball.non_batter and ball.non_batter in state.batters:
+            ns = state.batters[ball.non_batter]
             if not ns.is_out:
-                notes.append(f"Non-striker {ball.non_striker}: {ns.runs}({ns.balls_faced})")
+                notes.append(f"Non-batter {ball.non_batter}: {ns.runs}({ns.balls_faced})")
 
         # ============================================================== #
         #  4. BOWLER — figures + context
@@ -162,15 +162,15 @@ class LogicEngine:
         #  6. WICKET CONTEXT — rich info on dismissal
         # ============================================================== #
         if ball.is_wicket:
-            dismissed = ball.dismissal_batsman or ball.batsman
-            if dismissed in state.batsmen:
-                batter_d = state.batsmen[dismissed]
+            dismissed = ball.dismissal_batter or ball.batter
+            if dismissed in state.batters:
+                batter_d = state.batters[dismissed]
                 notes.append(
                     f"{dismissed} out for {batter_d.runs}({batter_d.balls_faced}) "
                     f"[{batter_d.fours}x4, {batter_d.sixes}x6]"
                 )
                 if batter_d.runs >= 30:
-                    notes.append("Set batsman gone — was looking dangerous")
+                    notes.append("Set batter gone — was looking dangerous")
                 if state.wickets <= 3:
                     notes.append(f"Top-order wicket, #{state.wickets} down")
                 elif state.wickets >= 7:

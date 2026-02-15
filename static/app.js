@@ -19,6 +19,16 @@ let totalDotBalls = 0;
 let totalBalls = 0;
 let recentOversData = [];
 
+// Timeline state
+let timelineData = null;            // Raw timeline API response
+let timelineBalls = [];             // Flat array: all balls across both innings (ordered)
+let ballIdToTimelineIdx = {};       // ball_id -> index in timelineBalls
+let ballIdToCommentaryIndices = {}; // ball_id -> [indices in allCommentaries]
+let commentaryIdxToTimelineIdx = {};// playbackIndex -> timeline position
+let isLiveMode = false;             // Following live edge
+let matchStatus = 'ready';          // 'ready' | 'generating' | 'generated'
+let isDragging = false;             // Dragging the timeline cursor
+
 // === DOM refs ===
 const liveBadge = document.getElementById('liveBadge');
 const commentaryFeed = document.getElementById('commentaryFeed');
@@ -28,6 +38,23 @@ const matchView = document.getElementById('matchView');
 const matchListContainer = document.getElementById('matchList');
 const navMatchControls = document.getElementById('navMatchControls');
 const playBtn = document.getElementById('playBtn');
+
+// Timeline DOM refs
+const tlBar = document.getElementById('timelineBar');
+const tlTrack = document.getElementById('timelineTrackContainer');
+const tlFilled = document.getElementById('timelineFilled');
+const tlBadges = document.getElementById('timelineBadges');
+const tlInningsSep = document.getElementById('timelineInningsSep');
+const tlCursor = document.getElementById('timelineCursor');
+const tlTooltip = document.getElementById('timelineTooltip');
+const tlTooltipOver = document.getElementById('tooltipOver');
+const tlTooltipPlayers = document.getElementById('tooltipPlayers');
+const tlTooltipEvent = document.getElementById('tooltipEvent');
+const tlLiveBadge = document.getElementById('timelineLiveBadge');
+const tlGoLive = document.getElementById('timelineGoLive');
+const tlPlayIcon = document.getElementById('timelinePlayIcon');
+const tlPauseIcon = document.getElementById('timelinePauseIcon');
+const tlInningsLabels = document.getElementById('timelineInningsLabels');
 
 const els = {
     battingTeam: document.getElementById('battingTeam'),
@@ -41,12 +68,12 @@ const els = {
     runsNeeded: document.getElementById('runsNeeded'),
     ballsRemaining: document.getElementById('ballsRemaining'),
     currentBowler: document.getElementById('currentBowler'),
-    strikerName: document.getElementById('strikerName'),
-    strikerRuns: document.getElementById('strikerRuns'),
-    strikerBalls: document.getElementById('strikerBalls'),
-    nonStrikerName: document.getElementById('nonStrikerName'),
-    nonStrikerRuns: document.getElementById('nonStrikerRuns'),
-    nonStrikerBalls: document.getElementById('nonStrikerBalls'),
+    batterName: document.getElementById('batterName'),
+    batterRuns: document.getElementById('batterRuns'),
+    batterBalls: document.getElementById('batterBalls'),
+    nonBatterName: document.getElementById('nonBatterName'),
+    nonBatterRuns: document.getElementById('nonBatterRuns'),
+    nonBatterBalls: document.getElementById('nonBatterBalls'),
     bowlerRuns: document.getElementById('bowlerRuns'),
     bowlerWickets: document.getElementById('bowlerWickets'),
     matchPhase: document.getElementById('matchPhase'),
@@ -102,6 +129,7 @@ function showHome() {
     liveBadge.classList.add('hidden');
     stopPolling();
     stopAudio();
+    resetTimeline();
     loadMatchList();
 }
 
@@ -196,6 +224,7 @@ function renderMatchList(matches) {
 async function openMatch(matchId) {
     showMatchView(matchId);
     clearCommentary();
+    resetTimeline();
     lastSeq = 0;
     allCommentaries = [];
     isPlaying = false;
@@ -203,8 +232,13 @@ async function openMatch(matchId) {
     if (currentAudio) { currentAudio.pause(); currentAudio = null; }
 
     try {
-        const data = await fetch(`/api/matches/${matchId}/commentaries?after_seq=0&language=${selectedLang}`).then(r => r.json());
+        // Fetch commentaries and timeline in parallel
+        const [data, _] = await Promise.all([
+            fetch(`/api/matches/${matchId}/commentaries?after_seq=0&language=${selectedLang}`).then(r => r.json()),
+            fetchTimeline(matchId),
+        ]);
         const match = data.match;
+        matchStatus = match.status;
 
         // Set match info in scoreboard
         if (match.match_info) {
@@ -219,17 +253,36 @@ async function openMatch(matchId) {
         if (match.status === 'generating') {
             liveBadge.classList.remove('hidden');
             liveBadge.classList.add('flex');
-            playBtn.classList.remove('hidden');
-            playBtn.textContent = 'Play';
+            isLiveMode = true;
+            updateLiveControls();
             startPolling(matchId);
+
+            // Ready to play from start — wait for user to press play
+            if (allCommentaries.length > 0) {
+                playbackIndex = 0;
+            }
+            updateTimelinePlayBtn();
         } else if (match.status === 'generated') {
             liveBadge.classList.add('hidden');
-            playBtn.classList.remove('hidden');
-            playBtn.textContent = 'Play';
+            isLiveMode = false;
+            updateLiveControls();
+
+            // Ready to play from beginning — wait for user to press play
+            if (allCommentaries.length > 0) {
+                playbackIndex = 0;
+            }
+            updateTimelinePlayBtn();
         } else {
             liveBadge.classList.add('hidden');
             playBtn.classList.add('hidden');
+            isLiveMode = false;
+            updateLiveControls();
             commentaryFeed.innerHTML = '<div class="feed-item feed-placeholder py-20 text-center"><p class="text-sm text-neutral-600">Commentary not generated yet</p></div>';
+        }
+
+        // Show timeline if we have data
+        if (timelineBalls.length > 0 && match.status !== 'ready') {
+            showTimeline();
         }
     } catch (e) {
         console.error('Failed to open match:', e);
@@ -251,8 +304,11 @@ function startPolling(matchId) {
             }
 
             if (data.match.status !== 'generating') {
+                matchStatus = data.match.status;
                 stopPolling();
                 liveBadge.classList.add('hidden');
+                isLiveMode = false;
+                updateLiveControls();
             }
         } catch (e) {
             console.error('Poll error:', e);
@@ -282,11 +338,22 @@ function processCommentaries(commentaries) {
         } else if (c.event_type === 'score_update') {
             updateScoreboard(c.data);
             addBallDot(c.data);
+            addBallFeedItem(c);
         } else if (c.event_type === 'commentary') {
-            addCommentary(c, allCommentaries.length - 1);
+            const d = c.data || {};
+            if (d.is_narrative) {
+                addCommentary(c, allCommentaries.length - 1);
+            } else {
+                updateBallFeedCommentary(c, allCommentaries.length - 1);
+            }
         } else if (c.event_type === 'match_end') {
             // Show match end
         }
+    }
+
+    // Rebuild timeline maps if timeline is loaded
+    if (timelineBalls.length > 0 && commentaries.length > 0) {
+        buildTimelineMaps();
     }
 }
 
@@ -298,6 +365,8 @@ function switchLanguage(lang) {
     allCommentaries = [];
     clearCommentary();
     stopAudio();
+    ballIdToCommentaryIndices = {};
+    commentaryIdxToTimelineIdx = {};
     if (currentMatchId) openMatch(currentMatchId);
 }
 
@@ -331,6 +400,7 @@ function resumePlayback() {
     clearPlaybackTimer();
     isPlaying = true;
     playBtn.textContent = 'Pause';
+    updateTimelinePlayBtn();
 
     // If we have a paused audio, resume it
     if (currentAudio && currentAudio.paused) {
@@ -353,6 +423,7 @@ function pausePlayback() {
     isPlaying = false;
     clearPlaybackTimer();
     playBtn.textContent = 'Play';
+    updateTimelinePlayBtn();
     if (currentAudio) {
         currentAudio.pause();
     }
@@ -368,6 +439,7 @@ function playFrom(idx) {
     playbackIndex = idx;
     isPlaying = true;
     playBtn.textContent = 'Pause';
+    updateTimelinePlayBtn();
     playCurrentCommentary();
 }
 
@@ -385,11 +457,13 @@ function playCurrentCommentary() {
         // In live mode, keep playing state and wait for more
         if (pollTimer) {
             highlightPlayingItem(-1);
+            updateTimelineCursor();
             return;
         }
         // Completed match — stop
         isPlaying = false;
         playBtn.textContent = 'Play';
+        updateTimelinePlayBtn();
         highlightPlayingItem(-1);
         return;
     }
@@ -397,6 +471,7 @@ function playCurrentCommentary() {
     const c = allCommentaries[playbackIndex];
     highlightPlayingItem(playbackIndex);
     scrollToPlayingItem(playbackIndex);
+    updateTimelineCursor();
 
     try {
         const a = new Audio(c.audio_url);
@@ -427,20 +502,29 @@ function playCurrentCommentary() {
     }
 }
 
+function findFeedItem(idx) {
+    // Try data-idx first, then fall back to data-ball-id
+    let el = commentaryFeed.querySelector(`[data-idx="${idx}"]`);
+    if (!el && idx >= 0 && idx < allCommentaries.length) {
+        const ballId = allCommentaries[idx].ball_id;
+        if (ballId) el = commentaryFeed.querySelector(`[data-ball-id="${ballId}"]`);
+    }
+    return el;
+}
+
 function highlightPlayingItem(idx) {
     commentaryFeed.querySelectorAll('.feed-item-playing').forEach(el =>
         el.classList.remove('feed-item-playing')
     );
     if (idx >= 0) {
-        const el = commentaryFeed.querySelector(`[data-idx="${idx}"]`);
+        const el = findFeedItem(idx);
         if (el) el.classList.add('feed-item-playing');
     }
 }
 
 function scrollToPlayingItem(idx) {
-    const el = commentaryFeed.querySelector(`[data-idx="${idx}"]`);
+    const el = findFeedItem(idx);
     if (!el) return;
-    // Scroll within the commentary feed container only, not the whole page
     const container = commentaryFeed;
     const elTop = el.offsetTop - container.offsetTop;
     const elHeight = el.offsetHeight;
@@ -461,18 +545,18 @@ function updateScoreboard(d) {
     els.ballsRemaining.textContent = d.balls_remaining;
     els.matchPhase.textContent = d.match_phase;
 
-    // Striker stats
-    if (d.striker) {
-        els.strikerName.textContent = d.striker.name;
-        els.strikerRuns.textContent = d.striker.runs;
-        els.strikerBalls.textContent = d.striker.balls;
+    // Batter (on-strike) stats
+    if (d.batter) {
+        els.batterName.textContent = d.batter.name;
+        els.batterRuns.textContent = d.batter.runs;
+        els.batterBalls.textContent = d.batter.balls;
     }
 
-    // Non-striker stats
-    if (d.non_striker) {
-        els.nonStrikerName.textContent = d.non_striker.name;
-        els.nonStrikerRuns.textContent = d.non_striker.runs;
-        els.nonStrikerBalls.textContent = d.non_striker.balls;
+    // Non-batter stats
+    if (d.non_batter) {
+        els.nonBatterName.textContent = d.non_batter.name;
+        els.nonBatterRuns.textContent = d.non_batter.runs;
+        els.nonBatterBalls.textContent = d.non_batter.balls;
     }
 
     // Bowler stats
@@ -616,13 +700,93 @@ function getNarrativeIcon(type) {
         second_innings_start: '🎯',
         match_result: '🏆',
         end_of_over: '↻',
-        new_batsman: '🏃',
+        new_batter: '🏃',
         phase_change: '⚡',
         milestone: '⭐',
     };
     return icons[type] || '✦';
 }
 
+/**
+ * Add a feed item for a ball from its score_update event.
+ * Shows ball info immediately; commentary text fills in later via updateBallFeedCommentary.
+ */
+function addBallFeedItem(c) {
+    const placeholder = commentaryFeed.querySelector('.feed-placeholder');
+    if (placeholder) placeholder.remove();
+
+    const d = c.data || {};
+    const ballInfo = c.ball_info;
+    const ballId = c.ball_id;
+
+    const item = document.createElement('div');
+    item.className = 'feed-item feed-ball-pending';
+    if (ballId) item.setAttribute('data-ball-id', ballId);
+
+    const over = ballInfo ? `${ballInfo.over}.${ballInfo.ball}` : '';
+    const batsmanBowler = ballInfo ? `${ballInfo.batter} vs ${ballInfo.bowler}` : '';
+    const indicatorClass = getBallIndicatorClass(ballInfo, d);
+    const indicatorLabel = getBallIndicatorLabel(ballInfo, d);
+
+    // Short result label shown until commentary text arrives
+    let resultText = '';
+    if (d.is_wicket) resultText = 'WICKET';
+    else if (d.is_six) resultText = '6 runs';
+    else if (d.is_boundary) resultText = '4 runs';
+    else {
+        const runs = d.ball_runs ?? 0;
+        resultText = runs === 0 ? 'Dot ball' : `${runs} run${runs !== 1 ? 's' : ''}`;
+    }
+
+    item.innerHTML = `
+        <div class="feed-ball-col">
+            <div class="feed-ball-over">${over}</div>
+            <div class="feed-ball-indicator ${indicatorClass}">${indicatorLabel}</div>
+        </div>
+        <div class="feed-content-col">
+            <div class="feed-meta">
+                <span class="feed-over">${batsmanBowler}</span>
+            </div>
+            <div class="feed-text feed-text-pending">${resultText}</div>
+        </div>
+    `;
+
+    commentaryFeed.insertBefore(item, commentaryFeed.firstChild);
+    while (commentaryFeed.children.length > 100) {
+        commentaryFeed.removeChild(commentaryFeed.lastChild);
+    }
+}
+
+/**
+ * Update an existing ball feed item with commentary text.
+ * Finds the feed item by ball_id and replaces the pending text.
+ */
+function updateBallFeedCommentary(c, idx) {
+    const d = c.data || {};
+    const ballId = c.ball_id;
+
+    // Find the feed item created by addBallFeedItem for this ball
+    const existing = ballId ? commentaryFeed.querySelector(`[data-ball-id="${ballId}"]`) : null;
+
+    if (existing) {
+        existing.classList.remove('feed-ball-pending');
+        existing.setAttribute('data-idx', idx);
+        if (d.is_pivot) existing.classList.add('pivot');
+
+        const textEl = existing.querySelector('.feed-text');
+        if (textEl && c.text) {
+            textEl.classList.remove('feed-text-pending');
+            textEl.textContent = c.text;
+        }
+    } else {
+        // Fallback: no matching score_update item (shouldn't happen normally)
+        addCommentary(c, idx);
+    }
+}
+
+/**
+ * Add a narrative commentary item to the feed (innings start, end of over, milestone, etc.)
+ */
 function addCommentary(c, idx) {
     const placeholder = commentaryFeed.querySelector('.feed-placeholder');
     if (placeholder) placeholder.remove();
@@ -632,61 +796,34 @@ function addCommentary(c, idx) {
     item.setAttribute('data-idx', idx);
     const ballInfo = c.ball_info;
 
-    if (d.is_narrative) {
-        const narrType = d.narrative_type || 'general';
-        item.className = `feed-item feed-narrative`;
-        const labels = {
-            first_innings_start: 'Match Start',
-            first_innings_end: 'Innings Break',
-            second_innings_start: 'Chase Begins',
-            match_result: 'Result',
-            end_of_over: 'Over Summary',
-            new_batsman: 'New Batsman',
-            phase_change: 'Phase Change',
-            milestone: 'Milestone',
-        };
-        const icon = getNarrativeIcon(narrType);
+    const narrType = d.narrative_type || 'general';
+    item.className = `feed-item feed-narrative`;
+    const labels = {
+        first_innings_start: 'Match Start',
+        first_innings_end: 'Innings Break',
+        second_innings_start: 'Chase Begins',
+        match_result: 'Result',
+        end_of_over: 'Over Summary',
+        new_batter: 'New Batter',
+        phase_change: 'Phase Change',
+        milestone: 'Milestone',
+    };
+    const icon = getNarrativeIcon(narrType);
 
-        item.innerHTML = `
-            <div class="feed-ball-col">
-                <div class="feed-narrative-icon narrative-icon-${narrType}">${icon}</div>
+    item.innerHTML = `
+        <div class="feed-ball-col">
+            <div class="feed-narrative-icon narrative-icon-${narrType}">${icon}</div>
+        </div>
+        <div class="feed-content-col">
+            <div class="feed-meta">
+                <span class="feed-badge badge-narrative">${labels[narrType] || 'Narrative'}</span>
             </div>
-            <div class="feed-content-col">
-                <div class="feed-meta">
-                    <span class="feed-badge badge-narrative">${labels[narrType] || 'Narrative'}</span>
-                    ${c.audio_url ? `<button class="audio-play-btn" onclick="playFrom(${idx})" title="Play from here">&#9654;</button>` : ''}
-                </div>
-                <div class="feed-text">${c.text || ''}</div>
-            </div>
-        `;
-    } else {
-        item.className = `feed-item`;
-        if (d.is_pivot) item.classList.add('pivot');
-
-        const over = ballInfo ? `${ballInfo.over}.${ballInfo.ball}` : '';
-        const batsmanBowler = ballInfo ? `${ballInfo.batsman} vs ${ballInfo.bowler}` : '';
-        const indicatorClass = getBallIndicatorClass(ballInfo, d);
-        const indicatorLabel = getBallIndicatorLabel(ballInfo, d);
-
-        item.innerHTML = `
-            <div class="feed-ball-col">
-                <div class="feed-ball-over">${over}</div>
-                <div class="feed-ball-indicator ${indicatorClass}">${indicatorLabel}</div>
-            </div>
-            <div class="feed-content-col">
-                <div class="feed-meta">
-                    <span class="feed-over">${batsmanBowler}</span>
-                    <div class="flex items-center gap-2">
-                        ${c.audio_url ? `<button class="audio-play-btn" onclick="playFrom(${idx})" title="Play from here">&#9654;</button>` : ''}
-                    </div>
-                </div>
-                <div class="feed-text">${c.text || ''}</div>
-            </div>
-        `;
-    }
+            <div class="feed-text">${c.text || ''}</div>
+        </div>
+    `;
 
     commentaryFeed.insertBefore(item, commentaryFeed.firstChild);
-    while (commentaryFeed.children.length > 50) {
+    while (commentaryFeed.children.length > 100) {
         commentaryFeed.removeChild(commentaryFeed.lastChild);
     }
 }
@@ -722,6 +859,438 @@ function stopAudio() {
     }
     highlightPlayingItem(-1);
     playBtn.textContent = 'Play';
+    updateTimelinePlayBtn();
+    updateTimelineCursor();
+}
+
+
+// === Timeline: Fetch & Build ===
+
+async function fetchTimeline(matchId) {
+    try {
+        const resp = await fetch(`/api/matches/${matchId}/timeline`);
+        timelineData = await resp.json();
+
+        // Flatten balls across innings in order
+        timelineBalls = [];
+        ballIdToTimelineIdx = {};
+        for (const inn of (timelineData.innings || [])) {
+            for (const b of (inn.deliveries || inn.balls || [])) {
+                ballIdToTimelineIdx[b.ball_id] = timelineBalls.length;
+                timelineBalls.push({
+                    ...b,
+                    innings: inn.innings_number,
+                    batting_team: inn.batting_team,
+                });
+            }
+        }
+
+        renderTimeline();
+        buildTimelineMaps();
+    } catch (e) {
+        console.error('Failed to fetch timeline:', e);
+    }
+}
+
+function buildTimelineMaps() {
+    ballIdToCommentaryIndices = {};
+    commentaryIdxToTimelineIdx = {};
+
+    allCommentaries.forEach((c, idx) => {
+        const ballId = c.ball_id;
+        if (ballId != null && ballIdToTimelineIdx[ballId] !== undefined) {
+            if (!ballIdToCommentaryIndices[ballId]) ballIdToCommentaryIndices[ballId] = [];
+            ballIdToCommentaryIndices[ballId].push(idx);
+            commentaryIdxToTimelineIdx[idx] = ballIdToTimelineIdx[ballId];
+        }
+    });
+
+    updateTimelineFilled();
+    updateTimelineCursor();
+}
+
+
+// === Timeline: Render ===
+
+function renderTimeline() {
+    if (!timelineData || !timelineBalls.length) return;
+
+    // Show timeline bar
+    tlBar.classList.remove('hidden');
+
+    // Render innings labels
+    renderInningsLabels();
+
+    // Render badges (key moments)
+    renderTimelineBadges();
+
+    // Render innings separator(s)
+    renderInningsSeparators();
+
+    // Initial cursor position
+    tlCursor.classList.add('hidden');
+}
+
+function renderInningsLabels() {
+    const innings = timelineData.innings || [];
+    const total = timelineBalls.length;
+    if (!total) return;
+
+    tlInningsLabels.innerHTML = innings.map(inn => {
+        const pct = ((inn.deliveries || inn.balls || []).length / total) * 100;
+        return `<div class="timeline-innings-label" style="width:${pct}%">${inn.batting_team || 'Inn ' + inn.innings_number}</div>`;
+    }).join('');
+}
+
+function renderTimelineBadges() {
+    const total = timelineBalls.length;
+    if (!total) return;
+
+    // Only show wickets and sixes — fours are too frequent and clutter the bar
+    let html = '';
+    timelineBalls.forEach((b, i) => {
+        const pct = (i / (total - 1)) * 100;
+        if (b.is_wicket) {
+            html += `<div class="timeline-badge badge-wicket" style="left:${pct}%" title="Wicket"></div>`;
+        } else if (b.is_six) {
+            html += `<div class="timeline-badge badge-six" style="left:${pct}%" title="Six"></div>`;
+        }
+    });
+    tlBadges.innerHTML = html;
+}
+
+function renderInningsSeparators() {
+    const innings = timelineData.innings || [];
+    const total = timelineBalls.length;
+    if (!total || innings.length <= 1) {
+        tlInningsSep.innerHTML = '';
+        return;
+    }
+
+    let cumulative = 0;
+    let html = '';
+    for (let i = 0; i < innings.length - 1; i++) {
+        cumulative += (innings[i].deliveries || innings[i].balls || []).length;
+        const pct = (cumulative / total) * 100;
+        html += `<div class="timeline-innings-sep-dot" style="left:${pct}%" title="Innings Break"></div>`;
+    }
+    tlInningsSep.innerHTML = html;
+}
+
+
+// === Timeline: Filled Region ===
+
+function updateTimelineFilled() {
+    const total = timelineBalls.length;
+    if (!total) { tlFilled.style.width = '0%'; return; }
+
+    // Find the furthest ball that has commentary
+    let maxIdx = -1;
+    for (const ballId of Object.keys(ballIdToCommentaryIndices)) {
+        const tlIdx = ballIdToTimelineIdx[ballId];
+        if (tlIdx !== undefined && tlIdx > maxIdx) maxIdx = tlIdx;
+    }
+
+    if (maxIdx < 0) {
+        tlFilled.style.width = '0%';
+    } else {
+        const pct = ((maxIdx + 1) / total) * 100;
+        tlFilled.style.width = `${Math.min(pct, 100)}%`;
+    }
+}
+
+
+// === Timeline: Cursor ===
+
+function getTimelinePositionFromPlayback() {
+    if (playbackIndex < 0) return -1;
+    // Exact match
+    if (commentaryIdxToTimelineIdx[playbackIndex] !== undefined) {
+        return commentaryIdxToTimelineIdx[playbackIndex];
+    }
+    // Walk backward to find closest ball
+    for (let i = playbackIndex; i >= 0; i--) {
+        if (commentaryIdxToTimelineIdx[i] !== undefined) {
+            return commentaryIdxToTimelineIdx[i];
+        }
+    }
+    return -1;
+}
+
+function updateTimelineCursor() {
+    const total = timelineBalls.length;
+    if (!total) return;
+
+    const pos = getTimelinePositionFromPlayback();
+    if (pos < 0) {
+        tlCursor.classList.add('hidden');
+        return;
+    }
+
+    tlCursor.classList.remove('hidden');
+    const pct = (pos / (total - 1)) * 100;
+    tlCursor.style.left = `${pct}%`;
+}
+
+function updateTimelinePlayBtn() {
+    if (isPlaying) {
+        tlPlayIcon.classList.add('hidden');
+        tlPauseIcon.classList.remove('hidden');
+    } else {
+        tlPlayIcon.classList.remove('hidden');
+        tlPauseIcon.classList.add('hidden');
+    }
+}
+
+
+// === Timeline: Scrubbing (Click & Drag) ===
+
+function initTimelineScrubbing() {
+    tlTrack.addEventListener('mousedown', onTrackMouseDown);
+    tlTrack.addEventListener('mousemove', onTrackMouseMove);
+    tlTrack.addEventListener('mouseleave', onTrackMouseLeave);
+
+    // Touch support
+    tlTrack.addEventListener('touchstart', onTrackTouchStart, { passive: false });
+
+    document.addEventListener('mousemove', onDocMouseMove);
+    document.addEventListener('mouseup', onDocMouseUp);
+    document.addEventListener('touchmove', onDocTouchMove, { passive: false });
+    document.addEventListener('touchend', onDocTouchEnd);
+}
+
+function getTimelineIdxFromEvent(e) {
+    const rect = tlTrack.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+    const ratio = x / rect.width;
+    const idx = Math.round(ratio * (timelineBalls.length - 1));
+    return Math.max(0, Math.min(idx, timelineBalls.length - 1));
+}
+
+function onTrackMouseDown(e) {
+    if (!timelineBalls.length) return;
+    e.preventDefault();
+    isDragging = true;
+    tlTrack.classList.add('dragging');
+    scrubToPosition(e);
+}
+
+function onTrackTouchStart(e) {
+    if (!timelineBalls.length) return;
+    e.preventDefault();
+    isDragging = true;
+    tlTrack.classList.add('dragging');
+    scrubToPosition(e);
+}
+
+function onDocMouseMove(e) {
+    if (!isDragging) return;
+    scrubToPosition(e);
+}
+
+function onDocTouchMove(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    scrubToPosition(e);
+}
+
+function onDocMouseUp() {
+    if (isDragging) {
+        isDragging = false;
+        tlTrack.classList.remove('dragging');
+    }
+}
+
+function onDocTouchEnd() {
+    if (isDragging) {
+        isDragging = false;
+        tlTrack.classList.remove('dragging');
+    }
+}
+
+function scrubToPosition(e) {
+    const idx = getTimelineIdxFromEvent(e);
+    const ball = timelineBalls[idx];
+    if (!ball) return;
+
+    // Move cursor visually immediately
+    const total = timelineBalls.length;
+    const pct = (idx / (total - 1)) * 100;
+    tlCursor.classList.remove('hidden');
+    tlCursor.style.left = `${pct}%`;
+
+    // Find commentary for this ball
+    const commentaryIndices = ballIdToCommentaryIndices[ball.ball_id];
+    if (commentaryIndices && commentaryIndices.length) {
+        // Find first commentary event (not score_update) for this ball
+        let targetIdx = commentaryIndices[0];
+        for (const ci of commentaryIndices) {
+            if (allCommentaries[ci] && allCommentaries[ci].event_type === 'commentary') {
+                targetIdx = ci;
+                break;
+            }
+        }
+        playFrom(targetIdx);
+
+        // Exit live mode if scrubbing backward
+        if (matchStatus === 'generating') {
+            const latestTimelineIdx = getLatestAvailableTimelineIdx();
+            if (idx < latestTimelineIdx) {
+                isLiveMode = false;
+                updateLiveControls();
+            }
+        }
+    }
+    // If no commentary, just update visual cursor (don't play)
+}
+
+
+// === Timeline: Hover Tooltip ===
+
+function onTrackMouseMove(e) {
+    if (isDragging) return; // Don't show tooltip while dragging
+    if (!timelineBalls.length) return;
+
+    const idx = getTimelineIdxFromEvent(e);
+    const ball = timelineBalls[idx];
+    if (!ball) { tlTooltip.classList.add('hidden'); return; }
+
+    // Position tooltip
+    const rect = tlTrack.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const tooltipWidth = 180; // approximate
+    let tooltipLeft = x;
+    // Clamp so tooltip doesn't overflow
+    if (tooltipLeft < tooltipWidth / 2) tooltipLeft = tooltipWidth / 2;
+    if (tooltipLeft > rect.width - tooltipWidth / 2) tooltipLeft = rect.width - tooltipWidth / 2;
+    tlTooltip.style.left = `${tooltipLeft}px`;
+
+    // Over info
+    const overStr = `Over ${ball.over}.${ball.ball}`;
+    let badgeHtml = '';
+    if (ball.is_wicket) badgeHtml = '<span class="tooltip-badge tb-wicket">W</span>';
+    else if (ball.is_six) badgeHtml = '<span class="tooltip-badge tb-six">SIX</span>';
+    else if (ball.is_boundary) badgeHtml = '<span class="tooltip-badge tb-four">FOUR</span>';
+    tlTooltipOver.innerHTML = `${overStr} ${badgeHtml}`;
+
+    // Players
+    tlTooltipPlayers.textContent = `${ball.batter} vs ${ball.bowler}`;
+
+    // Event / runs info
+    const hasCommentary = !!(ballIdToCommentaryIndices[ball.ball_id] && ballIdToCommentaryIndices[ball.ball_id].length);
+    if (ball.is_wicket) {
+        const wicketType = ball.wicket_type ? ball.wicket_type.toUpperCase() : 'OUT';
+        tlTooltipEvent.textContent = wicketType;
+        tlTooltipEvent.className = 'timeline-tooltip-event event-wicket';
+    } else if (ball.is_six) {
+        tlTooltipEvent.textContent = '6 runs';
+        tlTooltipEvent.className = 'timeline-tooltip-event event-six';
+    } else if (ball.is_boundary) {
+        tlTooltipEvent.textContent = '4 runs';
+        tlTooltipEvent.className = 'timeline-tooltip-event event-four';
+    } else if (ball.runs === 0 && ball.extras === 0) {
+        tlTooltipEvent.textContent = 'Dot ball';
+        tlTooltipEvent.className = 'timeline-tooltip-event event-dot';
+    } else {
+        const totalRuns = (ball.runs || 0) + (ball.extras || 0);
+        let label = `${totalRuns} run${totalRuns !== 1 ? 's' : ''}`;
+        if (ball.extras > 0 && ball.extras_type) label += ` (${ball.extras_type})`;
+        tlTooltipEvent.textContent = label;
+        tlTooltipEvent.className = 'timeline-tooltip-event event-runs';
+    }
+
+    if (!hasCommentary) {
+        tlTooltipEvent.textContent += ' — No commentary';
+        tlTooltipEvent.className = 'timeline-tooltip-event event-unavail';
+    }
+
+    tlTooltip.classList.remove('hidden');
+}
+
+function onTrackMouseLeave() {
+    if (!isDragging) {
+        tlTooltip.classList.add('hidden');
+    }
+}
+
+
+// === Timeline: Live Mode ===
+
+function getLatestAvailableTimelineIdx() {
+    let maxIdx = -1;
+    for (const ballId of Object.keys(ballIdToCommentaryIndices)) {
+        const tlIdx = ballIdToTimelineIdx[ballId];
+        if (tlIdx !== undefined && tlIdx > maxIdx) maxIdx = tlIdx;
+    }
+    return maxIdx;
+}
+
+function updateLiveControls() {
+    if (matchStatus === 'generating') {
+        if (isLiveMode) {
+            tlLiveBadge.classList.remove('hidden');
+            tlGoLive.classList.add('hidden');
+        } else {
+            tlLiveBadge.classList.add('hidden');
+            tlGoLive.classList.remove('hidden');
+        }
+    } else {
+        tlLiveBadge.classList.add('hidden');
+        tlGoLive.classList.add('hidden');
+    }
+}
+
+function goLive() {
+    isLiveMode = true;
+    updateLiveControls();
+
+    // Jump to the latest available commentary
+    const latestTlIdx = getLatestAvailableTimelineIdx();
+    if (latestTlIdx >= 0) {
+        const ball = timelineBalls[latestTlIdx];
+        const commentaryIndices = ballIdToCommentaryIndices[ball.ball_id];
+        if (commentaryIndices && commentaryIndices.length) {
+            // Jump to the last commentary for the latest ball
+            const lastCommentaryIdx = commentaryIndices[commentaryIndices.length - 1];
+            // Set playbackIndex to the next one so we wait for new
+            playbackIndex = lastCommentaryIdx + 1;
+            if (!isPlaying) {
+                isPlaying = true;
+                playBtn.textContent = 'Pause';
+                updateTimelinePlayBtn();
+            }
+            updateTimelineCursor();
+        }
+    }
+}
+
+
+// === Timeline: Show / Hide ===
+
+function showTimeline() {
+    tlBar.classList.remove('hidden');
+}
+
+function hideTimeline() {
+    tlBar.classList.add('hidden');
+}
+
+function resetTimeline() {
+    timelineData = null;
+    timelineBalls = [];
+    ballIdToTimelineIdx = {};
+    ballIdToCommentaryIndices = {};
+    commentaryIdxToTimelineIdx = {};
+    isLiveMode = false;
+    isDragging = false;
+    tlBadges.innerHTML = '';
+    tlInningsSep.innerHTML = '';
+    tlInningsLabels.innerHTML = '';
+    tlFilled.style.width = '0%';
+    tlCursor.classList.add('hidden');
+    tlTooltip.classList.add('hidden');
+    hideTimeline();
 }
 
 
@@ -752,7 +1321,7 @@ async function loadLanguages() {
         langs.forEach(l => {
             const o = document.createElement('option');
             o.value = l.code;
-            o.textContent = l.code === 'en' ? l.name : `${l.native_name} (${l.name})`;
+            o.textContent = l.native_name || l.name;
             if (l.code === 'hi') o.selected = true;
             sel.appendChild(o);
         });
@@ -763,6 +1332,7 @@ async function loadLanguages() {
 // === Init ===
 (async () => {
     await loadLanguages();
+    initTimelineScrubbing();
     routeFromUrl();
     if (!getMatchIdFromUrl()) {
         showHome();

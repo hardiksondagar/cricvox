@@ -8,7 +8,7 @@ def detect_pivot(state: MatchState, ball: BallEvent) -> bool:
     A pivot is a single delivery that significantly shifts the match equation.
     Examples:
     - A six when RRR > 12
-    - A wicket of a set batsman (30+ runs)
+    - A wicket of a set batter (30+ runs)
     - A boundary in the death overs when runs needed per ball > 1.5
     - Back-to-back boundaries
     - A wicket when only 2 wickets remain
@@ -23,11 +23,11 @@ def detect_pivot(state: MatchState, ball: BallEvent) -> bool:
         if runs_per_ball_needed > 1.5:
             return True
 
-    # Wicket of a set batsman
+    # Wicket of a set batter
     if ball.is_wicket:
-        dismissed = ball.dismissal_batsman or ball.batsman
-        if dismissed in state.batsmen:
-            batter = state.batsmen[dismissed]
+        dismissed = ball.dismissal_batter or ball.batter
+        if dismissed in state.batters:
+            batter = state.batters[dismissed]
             if batter.runs >= 30:
                 return True
         # Wicket when tail is exposed (7+ wickets down)

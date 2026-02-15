@@ -1,15 +1,20 @@
 """
 Commentary generation engine.
 
-Decoupled from the web server — reads balls from DB, generates commentary
-+ TTS for each configured language, writes results to match_commentaries.
+Decoupled from the web server — reads balls from DB, generates LLM
+commentary text for each configured language, writes results to
+match_commentaries.
 
-Usage:
+Audio (TTS) generation is a **separate step** — see generate_match_audio()
+and generate_commentary_audio().  This separation allows callers to:
+  1. Generate all commentary text first (fast, LLM-only).
+  2. Generate audio later, incrementally, or skip it entirely.
+
+Usage (text only):
     python -m app.generate <match_id> [start_over]
 
-Examples:
-    python -m app.generate 1          # generate from over 1
-    python -m app.generate 1 7        # generate from over 7
+Usage (audio for existing text):
+    python -m app.generate --audio <match_id> [language]
 """
 
 import asyncio
@@ -23,8 +28,11 @@ from app.commentary.generator import generate_commentary, generate_narrative
 from app.commentary.prompts import strip_audio_tags
 from app.audio.tts import synthesize_speech
 from app.storage.database import (
-    init_db, close_db, get_match, get_balls, update_match_status,
+    init_db, close_db, get_match, get_deliveries, update_match_status,
     delete_commentaries, insert_commentary,
+    get_commentaries_pending_audio, get_commentary_by_id,
+    update_commentary_audio, get_delivery_by_id, get_max_seq,
+    get_recent_commentary_texts, row_to_delivery_event,
 )
 from app.storage.audio import save_audio, clear_audio
 
@@ -33,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 # ------------------------------------------------------------------ #
-#  Per-ball generation
+#  Per-ball text generation (no TTS)
 # ------------------------------------------------------------------ #
 
 async def _generate_one_lang(
@@ -47,16 +55,8 @@ async def _generate_one_lang(
     language: str,
     extra_data: dict,
 ):
-    """Generate TTS + save audio + insert one commentary row for one language."""
+    """Generate commentary text and insert one DB row (no audio)."""
     display_text = strip_audio_tags(text)
-
-    audio_url = None
-    try:
-        audio_bytes = await synthesize_speech(text, branch, is_pivot, language=language)
-        if audio_bytes:
-            audio_url = save_audio(match_id, text, language, audio_bytes)
-    except Exception as e:
-        logger.error(f"TTS failed ({language}): {e}")
 
     await insert_commentary(
         match_id=match_id,
@@ -65,7 +65,7 @@ async def _generate_one_lang(
         event_type=event_type,
         language=language,
         text=display_text,
-        audio_url=audio_url,
+        audio_url=None,
         data=extra_data,
     )
     return display_text
@@ -102,7 +102,7 @@ async def _generate_commentary_all_langs(
             text = await generate_commentary(state, ball, logic_result, language=lang)
         except Exception as e:
             logger.error(f"Commentary generation failed ({lang}): {e}")
-            text = f"{ball.batsman} — {ball.runs} run(s)."
+            text = f"{ball.batter} — {ball.runs} run(s)."
         return await _generate_one_lang(
             match_id, ball_id, seq, "commentary", text, branch, is_pivot, lang, data
         )
@@ -156,17 +156,17 @@ async def _generate_narrative_all_langs(
 
 def _build_score_data(state, ball: BallEvent, logic_result) -> dict:
     """Build the language-independent score update data."""
-    # Striker stats
-    striker_stats = None
-    if state.current_batsman and state.current_batsman in state.batsmen:
-        bs = state.batsmen[state.current_batsman]
-        striker_stats = {"name": bs.name, "runs": bs.runs, "balls": bs.balls_faced, "fours": bs.fours, "sixes": bs.sixes, "sr": round(bs.strike_rate, 1)}
+    # Batter (on-strike) stats
+    batter_stats = None
+    if state.current_batter and state.current_batter in state.batters:
+        bs = state.batters[state.current_batter]
+        batter_stats = {"name": bs.name, "runs": bs.runs, "balls": bs.balls_faced, "fours": bs.fours, "sixes": bs.sixes, "sr": round(bs.strike_rate, 1)}
 
-    # Non-striker stats
-    non_striker_stats = None
-    if state.non_striker and state.non_striker in state.batsmen:
-        bs = state.batsmen[state.non_striker]
-        non_striker_stats = {"name": bs.name, "runs": bs.runs, "balls": bs.balls_faced, "fours": bs.fours, "sixes": bs.sixes, "sr": round(bs.strike_rate, 1)}
+    # Non-batter stats
+    non_batter_stats = None
+    if state.non_batter and state.non_batter in state.batters:
+        bs = state.batters[state.non_batter]
+        non_batter_stats = {"name": bs.name, "runs": bs.runs, "balls": bs.balls_faced, "fours": bs.fours, "sixes": bs.sixes, "sr": round(bs.strike_rate, 1)}
 
     # Current bowler stats
     bowler_stats = None
@@ -186,7 +186,7 @@ def _build_score_data(state, ball: BallEvent, logic_result) -> dict:
         "bowling_team": state.bowling_team,
         "target": state.target,
         "match_phase": state.match_phase,
-        "batsman": ball.batsman,
+        "batter": ball.batter,
         "bowler": ball.bowler,
         "ball_runs": ball.runs + ball.extras,
         "is_wicket": ball.is_wicket,
@@ -194,8 +194,8 @@ def _build_score_data(state, ball: BallEvent, logic_result) -> dict:
         "is_six": ball.is_six,
         "branch": logic_result.branch.value,
         "is_pivot": logic_result.is_pivot,
-        "striker": striker_stats,
-        "non_striker": non_striker_stats,
+        "batter": batter_stats,
+        "non_batter": non_batter_stats,
         "bowler_stats": bowler_stats,
     }
 
@@ -232,7 +232,7 @@ async def generate_match(match_id: int, start_over: int = 1):
         return
 
     # Load balls from DB
-    ball_rows = await get_balls(match_id, innings=2)
+    ball_rows = await get_deliveries(match_id, innings=2)
     if not ball_rows:
         logger.error(f"No balls found for match {match_id} innings 2")
         return
@@ -267,37 +267,20 @@ async def generate_match(match_id: int, start_over: int = 1):
     # Convert to BallEvent objects + context
     all_balls = []
     for br in ball_rows:
-        ball_data = br["data"]
-        all_balls.append((br["id"], BallEvent(**ball_data), br.get("context")))
+        all_balls.append((br["id"], row_to_delivery_event(br), br.get("context")))
 
     start_over_0 = max(start_over - 1, 0)
     warmup = [(bid, b, ctx) for bid, b, ctx in all_balls if b.over < start_over_0]
     live = [(bid, b, ctx) for bid, b, ctx in all_balls if b.over >= start_over_0]
 
-    # Fast-forward: build state for warmup balls
-    # If pre-computed, use the last warmup ball's state snapshot
-    if warmup and has_precomputed:
-        last_warmup_ctx = warmup[-1][2]
-        if last_warmup_ctx:
-            state = MatchState.model_validate(last_warmup_ctx["state"])
-            # Also fast-forward state_mgr for potential fallback
-            for _, ball, _ in warmup:
-                state_mgr.update(ball)
-            logger.info(f"Fast-forward (precomputed): {state.total_runs}/{state.wickets} after {state.overs_display}")
-        else:
-            # Fallback
-            for _, ball, _ in warmup:
-                state_mgr.update(ball)
-            state = state_mgr.get_state()
-            logger.info(f"Fast-forward: {state.total_runs}/{state.wickets} after {state.overs_display}")
-    elif warmup:
+    # Fast-forward: replay warmup balls through StateManager
+    if warmup:
         logger.info(f"Fast-forwarding {len(warmup)} balls to build state...")
         for _, ball, _ in warmup:
             state_mgr.update(ball)
-        state = state_mgr.get_state()
+    state = state_mgr.get_state()
+    if warmup:
         logger.info(f"Fast-forward: {state.total_runs}/{state.wickets} after {state.overs_display}")
-    else:
-        state = state_mgr.get_state()
 
     # Commentary history — maintained at runtime (not pre-computable)
     commentary_history: list[str] = []
@@ -353,7 +336,7 @@ async def generate_match(match_id: int, start_over: int = 1):
         seq += 1
         await insert_commentary(
             match_id, None, seq, "score_update", None, None, None,
-            _build_score_data(state, BallEvent(over=0, ball=0, batsman="", bowler=""),
+            _build_score_data(state, BallEvent(over=0, ball=0, batter="", bowler=""),
                               type("LR", (), {"branch": NarrativeBranch.ROUTINE, "is_pivot": False})()),
         )
 
@@ -362,25 +345,26 @@ async def generate_match(match_id: int, start_over: int = 1):
     # ============================================================ #
     for ball_db_id, ball, precomputed_ctx in live:
 
-        # -- Resolve state + logic for this ball --
+        # Always replay through StateManager for accurate state
+        state = state_mgr.update(ball)
+
         if precomputed_ctx:
-            # Use pre-computed context
-            state = MatchState.model_validate(precomputed_ctx["state"])
+            # Use pre-computed logic + narratives (avoids re-running LogicEngine)
             logic_result = LogicResult.model_validate(precomputed_ctx["logic"])
-            score_data = precomputed_ctx["score_data"]
             match_over = precomputed_ctx["match_over"]
             narrative_triggers = precomputed_ctx.get("narratives", [])
         else:
-            # Fallback: compute on the fly
-            state = state_mgr.update(ball)
+            # Fallback: compute logic on the fly
             logic_result = logic_engine.analyze(state, ball)
-            score_data = _build_score_data(state, ball, logic_result)
             match_over = (
                 state.runs_needed <= 0
                 or state.wickets >= 10
                 or state.balls_remaining <= 0
             )
             narrative_triggers = None  # handled inline below
+
+        # Build score_data from live state (always fresh)
+        score_data = _build_score_data(state, ball, logic_result)
 
         # Inject runtime commentary history into state
         state.commentary_history = list(commentary_history)
@@ -405,7 +389,7 @@ async def generate_match(match_id: int, start_over: int = 1):
                 commentary_history.pop(0)
 
         logger.info(
-            f"[{state.overs_display}] {ball.batsman}: {ball.runs}"
+            f"[{state.overs_display}] {ball.batter}: {ball.runs}"
             f"{'W' if ball.is_wicket else ''} "
             f"| {state.total_runs}/{state.wickets} | {logic_result.branch.value}"
         )
@@ -485,9 +469,9 @@ async def _inline_post_ball_narratives(
     previous_overs_completed = getattr(state, "_prev_overs", state.overs_completed)
 
     # --- MILESTONE ---
-    batsman_name = ball.batsman
-    if not match_over and batsman_name in state.batsmen:
-        batter = state.batsmen[batsman_name]
+    batter_name = ball.batter
+    if not match_over and batter_name in state.batters:
+        batter = state.batters[batter_name]
         milestone_type = None
         if batter.just_reached_fifty and batter.runs < 100:
             milestone_type = "FIFTY"
@@ -499,12 +483,12 @@ async def _inline_post_ball_narratives(
                 match_id, ball_db_id, seq, "milestone", state, languages,
                 branch=NarrativeBranch.BOUNDARY_MOMENTUM,
                 milestone_type=milestone_type,
-                batsman_name=batsman_name,
-                batsman_runs=batter.runs,
-                batsman_balls=batter.balls_faced,
-                batsman_fours=batter.fours,
-                batsman_sixes=batter.sixes,
-                batsman_sr=batter.strike_rate,
+                batter_name=batter_name,
+                batter_runs=batter.runs,
+                batter_balls=batter.balls_faced,
+                batter_fours=batter.fours,
+                batter_sixes=batter.sixes,
+                batter_sr=batter.strike_rate,
                 situation=f"Need {state.runs_needed} from {state.balls_remaining} balls",
             )
             if text:
@@ -512,14 +496,14 @@ async def _inline_post_ball_narratives(
                 if len(commentary_history) > 6:
                     commentary_history.pop(0)
 
-    # --- NEW BATSMAN ---
+    # --- NEW BATTER ---
     if not match_over and ball.is_wicket and state.wickets < 10:
-        dismissed = ball.dismissal_batsman or ball.batsman
+        dismissed = ball.dismissal_batter or ball.batter
         partnership_broken = ""
         last_fow = state.fall_of_wickets[-1] if state.fall_of_wickets else None
         if last_fow:
             partnership_broken = (
-                f"{dismissed} out for {last_fow.batsman_runs} at "
+                f"{dismissed} out for {last_fow.batter_runs} at "
                 f"{last_fow.team_score}/{last_fow.wicket_number}"
             )
         situation = f"Need {state.runs_needed} from {state.balls_remaining} balls"
@@ -527,9 +511,9 @@ async def _inline_post_ball_narratives(
             situation += " — collapse in progress!"
         seq += 1
         text = await _generate_narrative_all_langs(
-            match_id, ball_db_id, seq, "new_batsman", state, languages,
+            match_id, ball_db_id, seq, "new_batter", state, languages,
             branch=NarrativeBranch.WICKET_DRAMA,
-            new_batsman="",
+            new_batter="",
             position=state.wickets + 1,
             partnership_broken=partnership_broken,
             situation=situation,
@@ -599,8 +583,8 @@ async def _inline_post_ball_narratives(
             )
 
         highlights = []
-        if state.batsmen:
-            top_bat = max(state.batsmen.values(), key=lambda b: b.runs)
+        if state.batters:
+            top_bat = max(state.batters.values(), key=lambda b: b.runs)
             if top_bat.runs >= 15:
                 highlights.append(f"Top scorer: {top_bat.name} {top_bat.runs}({top_bat.balls_faced})")
         if state.bowlers:
@@ -634,15 +618,270 @@ async def _inline_post_ball_narratives(
     return {"seq": seq, "commentary_history": commentary_history}
 
 
+# ================================================================== #
+#  Single-ball generation
+# ================================================================== #
+
+async def generate_ball_commentary(
+    match_id: int,
+    ball_id: int,
+    languages: list[str] | None = None,
+) -> dict:
+    """
+    Generate LLM commentary for a single ball delivery.
+
+    Requires the ball to have pre-computed context (run precompute first).
+    Fetches recent commentary from DB for history injection.
+
+    Returns dict with status, seq range, and generated commentary IDs.
+    """
+    ball_row = await get_delivery_by_id(ball_id)
+    if not ball_row:
+        return {"status": "error", "message": f"Ball {ball_id} not found"}
+
+    if ball_row["match_id"] != match_id:
+        return {"status": "error", "message": "Ball does not belong to this match"}
+
+    ctx = ball_row.get("context")
+    if not ctx:
+        return {"status": "error", "message": "Ball has no pre-computed context. Run precompute first."}
+
+    match = await get_match(match_id)
+    if not match:
+        return {"status": "error", "message": "Match not found"}
+
+    # Resolve languages
+    if not languages:
+        languages = match.get("languages", ["hi"])
+    languages = [lang for lang in languages if lang in SUPPORTED_LANGUAGES]
+    if not languages:
+        return {"status": "error", "message": "No valid languages"}
+
+    match_info = match["match_info"]
+    innings_num = ball_row["innings"]
+    innings_summaries = match_info.get("innings_summary", [])
+    inn_meta = next(
+        (s for s in innings_summaries if s.get("innings_number") == innings_num), {},
+    )
+    batting_team = inn_meta.get("batting_team", match_info.get("batting_team", ""))
+    bowling_team = inn_meta.get("bowling_team", match_info.get("bowling_team", ""))
+    target = match_info.get("target", 0) if innings_num == 2 else 0
+
+    # Replay all balls up to (and including) this one through StateManager
+    all_balls = await get_deliveries(match_id, innings=innings_num)
+    state_mgr = StateManager(
+        batting_team=batting_team,
+        bowling_team=bowling_team,
+        target=target,
+    )
+    for br in all_balls:
+        state_mgr.update(row_to_delivery_event(br))
+        if br["id"] == ball_id:
+            break
+    state = state_mgr.get_state()
+    ball = row_to_delivery_event(ball_row)
+
+    # Unpack pre-computed context (logic + narratives only)
+    logic_result = LogicResult.model_validate(ctx["logic"])
+    match_over = ctx["match_over"]
+    narrative_triggers = ctx.get("narratives", [])
+    score_data = _build_score_data(state, ball, logic_result)
+
+    # Get commentary history from DB (last 6 texts in the first language)
+    history = await get_recent_commentary_texts(match_id, languages[0], limit=6)
+    state.commentary_history = history
+
+    seq = await get_max_seq(match_id)
+    start_seq = seq + 1
+
+    # 1. Score update (language-independent)
+    seq += 1
+    await insert_commentary(
+        match_id, ball_id, seq, "score_update", None, None, None, score_data,
+    )
+
+    # 2. Ball commentary (one row per language)
+    seq += 1
+    display_text = await _generate_commentary_all_langs(
+        match_id, ball_id, seq, state, ball, logic_result, languages,
+    )
+
+    # 3. Post-ball narratives
+    for narr in narrative_triggers:
+        ntype = narr["type"]
+        nbranch = NarrativeBranch(narr.get("branch", "over_transition"))
+        nkwargs = narr.get("kwargs", {})
+
+        if ntype == "match_result":
+            seq += 1
+            await _generate_narrative_all_langs(
+                match_id, None, seq, "match_result", state, languages,
+                branch=nbranch, **nkwargs,
+            )
+            seq += 1
+            await insert_commentary(
+                match_id, None, seq, "match_end", None, None, None,
+                {
+                    "result": "won" if state.runs_needed <= 0 else "lost",
+                    "final_score": f"{state.total_runs}/{state.wickets}",
+                    "overs": state.overs_display,
+                },
+            )
+        else:
+            seq += 1
+            await _generate_narrative_all_langs(
+                match_id, ball_id, seq, ntype, state, languages,
+                branch=nbranch, **nkwargs,
+            )
+
+    return {
+        "status": "ok",
+        "match_id": match_id,
+        "ball_id": ball_id,
+        "commentary_text": display_text,
+        "seq_start": start_seq,
+        "seq_end": seq,
+        "match_over": match_over,
+        "narratives_generated": len(narrative_triggers),
+    }
+
+
+# ================================================================== #
+#  Audio generation (separate from text)
+# ================================================================== #
+
+async def generate_commentary_audio(commentary_id: int) -> dict:
+    """
+    Generate TTS audio for a single commentary row.
+
+    Reads the commentary from DB, generates audio via TTS, saves the file,
+    and updates the DB row with the audio_url.
+
+    Returns a dict with commentary_id, audio_url (or None on failure),
+    and status ("generated", "skipped", or "failed").
+    """
+    row = await get_commentary_by_id(commentary_id)
+    if not row:
+        return {"commentary_id": commentary_id, "status": "not_found", "audio_url": None}
+
+    if row["audio_url"]:
+        return {"commentary_id": commentary_id, "status": "already_exists", "audio_url": row["audio_url"]}
+
+    if not row["text"] or not row["language"]:
+        return {"commentary_id": commentary_id, "status": "skipped", "audio_url": None}
+
+    data = row.get("data", {})
+    branch = NarrativeBranch(data.get("branch", "routine"))
+    is_pivot = data.get("is_pivot", False)
+    language = row["language"]
+    match_id = row["match_id"]
+
+    try:
+        audio_bytes = await synthesize_speech(
+            row["text"], branch, is_pivot, language=language,
+        )
+        if audio_bytes:
+            audio_url = save_audio(match_id, row["text"], language, audio_bytes)
+            await update_commentary_audio(commentary_id, audio_url)
+            return {"commentary_id": commentary_id, "status": "generated", "audio_url": audio_url}
+        else:
+            return {"commentary_id": commentary_id, "status": "failed", "audio_url": None}
+    except Exception as e:
+        logger.error(f"TTS failed for commentary {commentary_id} ({language}): {e}")
+        return {"commentary_id": commentary_id, "status": "failed", "audio_url": None, "error": str(e)}
+
+
+async def generate_match_audio(
+    match_id: int,
+    language: str | None = None,
+) -> dict:
+    """
+    Generate TTS audio for all commentaries in a match that don't have audio yet.
+
+    Args:
+        match_id:  Integer match ID.
+        language:  Optional language filter. If None, processes all languages.
+
+    Returns a summary dict with total, generated, skipped, failed counts.
+    """
+    match = await get_match(match_id)
+    if not match:
+        return {"match_id": match_id, "error": "Match not found"}
+
+    pending = await get_commentaries_pending_audio(match_id, language=language)
+
+    if not pending:
+        return {
+            "match_id": match_id,
+            "language": language,
+            "total": 0,
+            "generated": 0,
+            "skipped": 0,
+            "failed": 0,
+            "message": "No commentaries pending audio generation",
+        }
+
+    logger.info(
+        f"Generating audio for match {match_id}: "
+        f"{len(pending)} commentaries pending"
+        f"{f' (language={language})' if language else ''}"
+    )
+
+    generated = 0
+    failed = 0
+    skipped = 0
+
+    for row in pending:
+        result = await generate_commentary_audio(row["id"])
+        if result["status"] == "generated":
+            generated += 1
+        elif result["status"] == "failed":
+            failed += 1
+        else:
+            skipped += 1
+
+    logger.info(
+        f"Audio generation complete for match {match_id}: "
+        f"{generated} generated, {failed} failed, {skipped} skipped"
+    )
+
+    return {
+        "match_id": match_id,
+        "language": language,
+        "total": len(pending),
+        "generated": generated,
+        "skipped": skipped,
+        "failed": failed,
+    }
+
+
 # ------------------------------------------------------------------ #
 #  CLI entry point
 # ------------------------------------------------------------------ #
 
 async def _main():
     if len(sys.argv) < 2:
-        print("Usage: python -m app.generate <match_id> [start_over]")
+        print("Usage:")
+        print("  python -m app.generate <match_id> [start_over]    # generate text")
+        print("  python -m app.generate --audio <match_id> [lang]  # generate audio")
         sys.exit(1)
 
+    # Audio generation mode
+    if sys.argv[1] == "--audio":
+        if len(sys.argv) < 3:
+            print("Usage: python -m app.generate --audio <match_id> [language]")
+            sys.exit(1)
+        match_id = int(sys.argv[2])
+        language = sys.argv[3] if len(sys.argv) > 3 else None
+        await init_db()
+        try:
+            result = await generate_match_audio(match_id, language=language)
+            print(f"Audio generation result: {result}")
+        finally:
+            await close_db()
+        return
+
+    # Text generation mode (default)
     match_id = int(sys.argv[1])
     start_over = int(sys.argv[2]) if len(sys.argv) > 2 else 1
 

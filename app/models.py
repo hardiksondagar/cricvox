@@ -49,7 +49,7 @@ class NarrativeMoment(str, Enum):
 
     # In-play moments
     END_OF_OVER = "end_of_over"
-    NEW_BATSMAN = "new_batsman"
+    NEW_BATTER = "new_batter"
     PHASE_CHANGE = "phase_change"
     MILESTONE = "milestone"
 
@@ -59,17 +59,17 @@ class BallEvent(BaseModel):
 
     over: int = Field(..., description="Over number (0-indexed)")
     ball: int = Field(..., description="Ball number within the over (1-6)")
-    batsman: str
+    batter: str
     bowler: str
     runs: int = Field(0, description="Runs scored off the bat")
     extras: int = Field(0, description="Extra runs (wides, no-balls, etc.)")
     extras_type: Optional[str] = Field(None, description="Type of extra: wide, noball, bye, legbye")
     is_wicket: bool = False
     wicket_type: Optional[str] = Field(None, description="e.g. bowled, caught, lbw, run_out")
-    dismissal_batsman: Optional[str] = Field(None, description="Batsman dismissed (if different from striker)")
+    dismissal_batter: Optional[str] = Field(None, description="Batsman dismissed (if different from current batter)")
     is_boundary: bool = False
     is_six: bool = False
-    non_striker: Optional[str] = None
+    non_batter: Optional[str] = None
     # Rich fields from parsed HTML commentary feeds
     commentary: Optional[str] = Field(None, description="Original commentary text from the feed")
     result_text: Optional[str] = Field(None, description="Raw result string, e.g. 'FOUR', 'no run', 'out Caught'")
@@ -79,12 +79,13 @@ class FallOfWicket(BaseModel):
     """Record of a wicket falling."""
 
     wicket_number: int
-    batsman: str
-    batsman_runs: int
+    batter: str
+    batter_runs: int
     team_score: int
     overs: str
     bowler: str
     how: Optional[str] = None
+    partner: Optional[str] = None
 
 
 class BowlerStats(BaseModel):
@@ -123,7 +124,7 @@ class BowlerStats(BaseModel):
         return f"{self.wickets}/{self.runs_conceded} ({self.overs_display})"
 
 
-class BatsmanStats(BaseModel):
+class BatterStats(BaseModel):
     """Per-batsman run tracker for milestone detection."""
 
     name: str
@@ -190,12 +191,12 @@ class MatchState(BaseModel):
     consecutive_dots: int = 0
     current_over_runs: int = 0
     current_over_wickets: int = 0
-    batsmen: dict[str, BatsmanStats] = Field(default_factory=dict)
+    batters: dict[str, BatterStats] = Field(default_factory=dict)
     bowlers: dict[str, BowlerStats] = Field(default_factory=dict)
-    current_batsman: Optional[str] = None
+    current_batter: Optional[str] = None
     current_bowler: Optional[str] = None
-    non_striker: Optional[str] = None
-    previous_batsman: Optional[str] = None
+    non_batter: Optional[str] = None
+    previous_batter: Optional[str] = None
     previous_bowler: Optional[str] = None
     last_commentary: str = ""
     commentary_history: list[str] = Field(default_factory=list)  # last N lines
@@ -227,8 +228,8 @@ class MatchState(BaseModel):
     is_new_bowler: bool = False
     is_new_over: bool = False
     is_strike_change: bool = False
-    is_new_batsman: bool = False
-    new_batsman_name: Optional[str] = None
+    is_new_batter: bool = False
+    new_batter_name: Optional[str] = None
     previous_over_summary: Optional[str] = None
 
     # ------------------------------------------------------------------ #
@@ -327,7 +328,7 @@ class MatchState(BaseModel):
     def dot_ball_percentage(self) -> float:
         """Overall dot ball % in the innings."""
         total_dots = sum(
-            b.dots for b in self.batsmen.values() if not b.is_out or b.dots > 0
+            b.dots for b in self.batters.values() if not b.is_out or b.dots > 0
         )
         if self.total_balls_bowled == 0:
             return 0.0

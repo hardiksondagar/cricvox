@@ -1,13 +1,414 @@
 {
   "match_info": {
-    "title": "ICC T20 World Cup 2024 Final",
-    "venue": "Kensington Oval, Barbados",
+    "title": "South Africa vs India, Final, ICC Mens T20 World Cup 2024",
+    "venue": "Kensington Oval, Bridgetown, Barbados",
     "format": "T20",
     "teams": [
-      "India",
-      "South Africa"
-    ]
+      "South Africa",
+      "India"
+    ],
+    "team1": "South Africa",
+    "team2": "India",
+    "team1_short": "RSA",
+    "team2_short": "IND",
+    "match_date": "Sat, Jun 29",
+    "time": "10:30 AM LOCAL, 2:30 PM GMT",
+    "toss": "India won the toss and opt to Bat",
+    "result": "India won by 7 runs",
+    "series": "ICC Mens T20 World Cup 2024",
+    "umpires": "Chris Gaffaney, Richard Illingworth",
+    "third_umpire": "Richard Kettleborough",
+    "referee": "Richie Richardson",
+    "venue_details": {
+      "stadium": "Kensington Oval",
+      "city": "Bridgetown, Barbados, West Indies",
+      "capacity": "28,000",
+      "ends": "Malcolm Marshall End, Joel Garner End",
+      "hosts_to": "Barbados"
+    }
   },
+  "players": [
+    {
+      "player_name": "Quinton de Kock",
+      "team": "South Africa",
+      "role": "WK-Batter",
+      "is_captain": false,
+      "is_keeper": true,
+      "player_status": "Playing XI",
+      "profile_id": 8520,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c351836/quinton-de-kock.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Reeza Hendricks",
+      "team": "South Africa",
+      "role": "Batter",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 9491,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c351828/reeza-hendricks.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Aiden Markram",
+      "team": "South Africa",
+      "role": "Batter",
+      "is_captain": true,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 9582,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c351829/aiden-markram.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Tristan Stubbs",
+      "team": "South Africa",
+      "role": "WK-Batter",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 19243,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c244778/tristan-stubbs.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Heinrich Klaasen",
+      "team": "South Africa",
+      "role": "WK-Batter",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 10209,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c351833/heinrich-klaasen.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "David Miller",
+      "team": "South Africa",
+      "role": "Batter",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 6349,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c351831/david-miller.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Marco Jansen",
+      "team": "South Africa",
+      "role": "Bowling Allrounder",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 14565,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c351832/marco-jansen.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Keshav Maharaj",
+      "team": "South Africa",
+      "role": "Bowler",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 9720,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c351841/keshav-maharaj.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Kagiso Rabada",
+      "team": "South Africa",
+      "role": "Bowler",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 9585,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c351849/kagiso-rabada.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Anrich Nortje",
+      "team": "South Africa",
+      "role": "Bowler",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 11427,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c244754/anrich-nortje.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Tabraiz Shamsi",
+      "team": "South Africa",
+      "role": "Bowler",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 10173,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c351846/tabraiz-shamsi.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Rohit Sharma",
+      "team": "India",
+      "role": "Batter",
+      "is_captain": true,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 576,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c352478/rohit-sharma.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Virat Kohli",
+      "team": "India",
+      "role": "Batter",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 1413,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c332891/virat-kohli.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Rishabh Pant",
+      "team": "India",
+      "role": "WK-Batter",
+      "is_captain": false,
+      "is_keeper": true,
+      "player_status": "Playing XI",
+      "profile_id": 10744,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c244978/rishabh-pant.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Suryakumar Yadav",
+      "team": "India",
+      "role": "Batter",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 7915,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c352481/suryakumar-yadav.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Shivam Dube",
+      "team": "India",
+      "role": "Batting Allrounder",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 11195,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c183291/shivam-dube.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Hardik Pandya",
+      "team": "India",
+      "role": "Batting Allrounder",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 9647,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c352482/hardik-pandya.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Ravindra Jadeja",
+      "team": "India",
+      "role": "Bowling Allrounder",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 587,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c352483/ravindra-jadeja.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Axar Patel",
+      "team": "India",
+      "role": "Bowling Allrounder",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 8808,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c332897/axar-patel.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Arshdeep Singh",
+      "team": "India",
+      "role": "Bowler",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 13217,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c244971/arshdeep-singh.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Kuldeep Yadav",
+      "team": "India",
+      "role": "Bowler",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 8292,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c352490/kuldeep-yadav.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Jasprit Bumrah",
+      "team": "India",
+      "role": "Bowler",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Playing XI",
+      "profile_id": 9311,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c352488/jasprit-bumrah.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Ottneil Baartman",
+      "team": "South Africa",
+      "role": "Bowler",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Bench",
+      "profile_id": 13100,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c182026/ottneil-baartman.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Gerald Coetzee",
+      "team": "South Africa",
+      "role": "Bowler",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Bench",
+      "profile_id": 13320,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c351631/gerald-coetzee.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Bjorn Fortuin",
+      "team": "South Africa",
+      "role": "Bowler",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Bench",
+      "profile_id": 10676,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c244752/bjorn-fortuin.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Ryan Rickelton",
+      "team": "South Africa",
+      "role": "WK-Batter",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Bench",
+      "profile_id": 13070,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c182026/ryan-rickelton.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Yuzvendra Chahal",
+      "team": "India",
+      "role": "Bowler",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Bench",
+      "profile_id": 7910,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c244981/yuzvendra-chahal.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Sanju Samson",
+      "team": "India",
+      "role": "WK-Batter",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Bench",
+      "profile_id": 8271,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c226289/sanju-samson.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Mohammed Siraj",
+      "team": "India",
+      "role": "Bowler",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Bench",
+      "profile_id": 10808,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c352491/mohammed-siraj.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Yashasvi Jaiswal",
+      "team": "India",
+      "role": "Batter",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Bench",
+      "profile_id": 13940,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c226279/yashasvi-jaiswal.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Shukri Conrad",
+      "team": "South Africa",
+      "role": "Head Coach",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Support Staff",
+      "profile_id": 54423,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c182026/shukri-conrad.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Neil McKenzie",
+      "team": "South Africa",
+      "role": "Batting Coach",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Support Staff",
+      "profile_id": 1062,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c154037/neil-mckenzie.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Piet Botha",
+      "team": "South Africa",
+      "role": "Bowling Coach",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Support Staff",
+      "profile_id": 54427,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c182026/piet-botha.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Kruger van Wyk",
+      "team": "South Africa",
+      "role": "Fielding Coach",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Support Staff",
+      "profile_id": 8213,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c182026/kruger-van-wyk.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Rahul Dravid",
+      "team": "India",
+      "role": "Head Coach",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Support Staff",
+      "profile_id": 27,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c156286/rahul-dravid.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Vikram Rathour",
+      "team": "India",
+      "role": "Batting Coach",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Support Staff",
+      "profile_id": 3909,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c151858/vikram-rathour.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "Paras Mhambrey",
+      "team": "India",
+      "role": "Bowling Coach",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Support Staff",
+      "profile_id": 3910,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c182026/paras-mhambrey.jpg?d=low&p=gthumb"
+    },
+    {
+      "player_name": "T Dilip",
+      "team": "India",
+      "role": "Fielding Coach",
+      "is_captain": false,
+      "is_keeper": false,
+      "player_status": "Support Staff",
+      "profile_id": 45950,
+      "image_url": "https://static.cricbuzz.com/a/img/v1/i1/c182026/t-dilip.jpg?d=low&p=gthumb"
+    }
+  ],
   "innings": [
     {
       "innings_number": 1,
@@ -15,7 +416,327 @@
       "bowling_team": "South Africa",
       "total_runs": 176,
       "total_wickets": 7,
+      "total_overs": 20.0,
+      "run_rate": 8.8,
+      "extras_total": 7,
+      "extras_detail": {
+        "b": 0,
+        "lb": 0,
+        "w": 6,
+        "nb": 1,
+        "p": 0
+      },
       "target": null,
+      "batters": [
+        {
+          "name": "Rohit",
+          "runs": 9,
+          "balls": 5,
+          "fours": 2,
+          "sixes": 0,
+          "strike_rate": 180.0,
+          "dismissal_info": "c Klaasen b Maharaj",
+          "is_out": true,
+          "is_captain": true,
+          "is_keeper": false,
+          "position": 1,
+          "profile_id": 576
+        },
+        {
+          "name": "Kohli",
+          "runs": 76,
+          "balls": 59,
+          "fours": 6,
+          "sixes": 2,
+          "strike_rate": 128.81,
+          "dismissal_info": "c Rabada b Marco Jansen",
+          "is_out": true,
+          "is_captain": false,
+          "is_keeper": false,
+          "position": 2,
+          "profile_id": 1413
+        },
+        {
+          "name": "Pant",
+          "runs": 0,
+          "balls": 2,
+          "fours": 0,
+          "sixes": 0,
+          "strike_rate": 0.0,
+          "dismissal_info": "c de Kock b Maharaj",
+          "is_out": true,
+          "is_captain": false,
+          "is_keeper": true,
+          "position": 3,
+          "profile_id": 10744
+        },
+        {
+          "name": "Suryakumar Yadav",
+          "runs": 3,
+          "balls": 4,
+          "fours": 0,
+          "sixes": 0,
+          "strike_rate": 75.0,
+          "dismissal_info": "c Klaasen b Rabada",
+          "is_out": true,
+          "is_captain": false,
+          "is_keeper": false,
+          "position": 4,
+          "profile_id": 7915
+        },
+        {
+          "name": "Axar",
+          "runs": 47,
+          "balls": 31,
+          "fours": 1,
+          "sixes": 4,
+          "strike_rate": 151.61,
+          "dismissal_info": "run out (de Kock)",
+          "is_out": true,
+          "is_captain": false,
+          "is_keeper": false,
+          "position": 5,
+          "profile_id": 8808
+        },
+        {
+          "name": "Shivam Dube",
+          "runs": 27,
+          "balls": 16,
+          "fours": 3,
+          "sixes": 1,
+          "strike_rate": 168.75,
+          "dismissal_info": "c David Miller b Nortje",
+          "is_out": true,
+          "is_captain": false,
+          "is_keeper": false,
+          "position": 6,
+          "profile_id": 11195
+        },
+        {
+          "name": "Hardik Pandya",
+          "runs": 5,
+          "balls": 2,
+          "fours": 1,
+          "sixes": 0,
+          "strike_rate": 250.0,
+          "dismissal_info": "not out",
+          "is_out": false,
+          "is_captain": false,
+          "is_keeper": false,
+          "position": 7,
+          "profile_id": 9647
+        },
+        {
+          "name": "Ravindra Jadeja",
+          "runs": 2,
+          "balls": 2,
+          "fours": 0,
+          "sixes": 0,
+          "strike_rate": 100.0,
+          "dismissal_info": "c Maharaj b Nortje",
+          "is_out": true,
+          "is_captain": false,
+          "is_keeper": false,
+          "position": 8,
+          "profile_id": 587
+        }
+      ],
+      "bowlers": [
+        {
+          "name": "Marco Jansen",
+          "overs": 4.0,
+          "maidens": 0,
+          "runs": 49,
+          "wickets": 1,
+          "noballs": 1,
+          "wides": 1,
+          "economy": 12.2,
+          "profile_id": 14565
+        },
+        {
+          "name": "Maharaj",
+          "overs": 3.0,
+          "maidens": 0,
+          "runs": 23,
+          "wickets": 2,
+          "noballs": 0,
+          "wides": 0,
+          "economy": 7.7,
+          "profile_id": 9720
+        },
+        {
+          "name": "Rabada",
+          "overs": 4.0,
+          "maidens": 0,
+          "runs": 36,
+          "wickets": 1,
+          "noballs": 0,
+          "wides": 2,
+          "economy": 9.0,
+          "profile_id": 9585
+        },
+        {
+          "name": "Markram",
+          "overs": 2.0,
+          "maidens": 0,
+          "runs": 16,
+          "wickets": 0,
+          "noballs": 0,
+          "wides": 0,
+          "economy": 8.0,
+          "profile_id": 9582
+        },
+        {
+          "name": "Nortje",
+          "overs": 4.0,
+          "maidens": 0,
+          "runs": 26,
+          "wickets": 2,
+          "noballs": 0,
+          "wides": 2,
+          "economy": 6.5,
+          "profile_id": 11427
+        },
+        {
+          "name": "Shamsi",
+          "overs": 3.0,
+          "maidens": 0,
+          "runs": 26,
+          "wickets": 0,
+          "noballs": 0,
+          "wides": 1,
+          "economy": 8.7,
+          "profile_id": 10173
+        }
+      ],
+      "fall_of_wickets": [
+        {
+          "batter": "Rohit",
+          "score": "23-1",
+          "team_score": 23,
+          "wicket_number": 1,
+          "overs": "1.4"
+        },
+        {
+          "batter": "Pant",
+          "score": "23-2",
+          "team_score": 23,
+          "wicket_number": 2,
+          "overs": "1.6"
+        },
+        {
+          "batter": "Suryakumar Yadav",
+          "score": "34-3",
+          "team_score": 34,
+          "wicket_number": 3,
+          "overs": "4.3"
+        },
+        {
+          "batter": "Axar",
+          "score": "106-4",
+          "team_score": 106,
+          "wicket_number": 4,
+          "overs": "13.3"
+        },
+        {
+          "batter": "Kohli",
+          "score": "163-5",
+          "team_score": 163,
+          "wicket_number": 5,
+          "overs": "18.5"
+        },
+        {
+          "batter": "Shivam Dube",
+          "score": "174-6",
+          "team_score": 174,
+          "wicket_number": 6,
+          "overs": "19.4"
+        },
+        {
+          "batter": "Ravindra Jadeja",
+          "score": "176-7",
+          "team_score": 176,
+          "wicket_number": 7,
+          "overs": "19.6"
+        }
+      ],
+      "partnerships": [
+        {
+          "wicket_number": 1,
+          "batter1": "Rohit",
+          "batter2": "Kohli",
+          "runs": 23,
+          "balls": 10,
+          "batter1_runs": 9,
+          "batter2_runs": 14
+        },
+        {
+          "wicket_number": 2,
+          "batter1": "Pant",
+          "batter2": "Kohli",
+          "runs": 0,
+          "balls": 2,
+          "batter1_runs": 0,
+          "batter2_runs": 0
+        },
+        {
+          "wicket_number": 3,
+          "batter1": "Suryakumar Yadav",
+          "batter2": "Kohli",
+          "runs": 11,
+          "balls": 15,
+          "batter1_runs": 3,
+          "batter2_runs": 8
+        },
+        {
+          "wicket_number": 4,
+          "batter1": "Axar",
+          "batter2": "Kohli",
+          "runs": 72,
+          "balls": 54,
+          "batter1_runs": 47,
+          "batter2_runs": 21
+        },
+        {
+          "wicket_number": 5,
+          "batter1": "Shivam Dube",
+          "batter2": "Kohli",
+          "runs": 57,
+          "balls": 33,
+          "batter1_runs": 22,
+          "batter2_runs": 33
+        },
+        {
+          "wicket_number": 6,
+          "batter1": "Shivam Dube",
+          "batter2": "Hardik Pandya",
+          "runs": 11,
+          "balls": 5,
+          "batter1_runs": 5,
+          "batter2_runs": 5
+        },
+        {
+          "wicket_number": 7,
+          "batter1": "Jadeja",
+          "batter2": "Hardik Pandya",
+          "runs": 2,
+          "balls": 2,
+          "batter1_runs": 2,
+          "batter2_runs": 0
+        }
+      ],
+      "powerplays": [
+        {
+          "type": "Mandatory",
+          "overs": "0.1 - 6",
+          "runs": 45
+        }
+      ],
+      "did_not_bat": [
+        "Arshdeep Singh",
+        "Kuldeep Yadav",
+        "Bumrah"
+      ],
       "balls": [
         {
           "runs": 1,
@@ -2055,9 +2776,380 @@
       "innings_number": 2,
       "batting_team": "South Africa",
       "bowling_team": "India",
-      "total_runs": 168,
+      "total_runs": 169,
       "total_wickets": 8,
+      "total_overs": 20.0,
+      "run_rate": 8.45,
+      "extras_total": 9,
+      "extras_detail": {
+        "b": 1,
+        "lb": 4,
+        "w": 3,
+        "nb": 1,
+        "p": 0
+      },
       "target": 177,
+      "batters": [
+        {
+          "name": "Reeza Hendricks",
+          "runs": 4,
+          "balls": 5,
+          "fours": 1,
+          "sixes": 0,
+          "strike_rate": 80.0,
+          "dismissal_info": "b Bumrah",
+          "is_out": true,
+          "is_captain": false,
+          "is_keeper": false,
+          "position": 1,
+          "profile_id": 9491
+        },
+        {
+          "name": "Quinton de Kock",
+          "runs": 39,
+          "balls": 31,
+          "fours": 4,
+          "sixes": 1,
+          "strike_rate": 125.81,
+          "dismissal_info": "c Kuldeep Yadav b Arshdeep Singh",
+          "is_out": true,
+          "is_captain": false,
+          "is_keeper": true,
+          "position": 2,
+          "profile_id": 8520
+        },
+        {
+          "name": "Aiden Markram",
+          "runs": 4,
+          "balls": 5,
+          "fours": 1,
+          "sixes": 0,
+          "strike_rate": 80.0,
+          "dismissal_info": "c Pant b Arshdeep Singh",
+          "is_out": true,
+          "is_captain": true,
+          "is_keeper": false,
+          "position": 3,
+          "profile_id": 9582
+        },
+        {
+          "name": "Tristan Stubbs",
+          "runs": 31,
+          "balls": 21,
+          "fours": 3,
+          "sixes": 1,
+          "strike_rate": 147.62,
+          "dismissal_info": "b Axar",
+          "is_out": true,
+          "is_captain": false,
+          "is_keeper": false,
+          "position": 4,
+          "profile_id": 19243
+        },
+        {
+          "name": "Heinrich Klaasen",
+          "runs": 52,
+          "balls": 27,
+          "fours": 2,
+          "sixes": 5,
+          "strike_rate": 192.59,
+          "dismissal_info": "c Pant b Hardik Pandya",
+          "is_out": true,
+          "is_captain": false,
+          "is_keeper": false,
+          "position": 5,
+          "profile_id": 10209
+        },
+        {
+          "name": "David Miller",
+          "runs": 21,
+          "balls": 17,
+          "fours": 1,
+          "sixes": 1,
+          "strike_rate": 123.53,
+          "dismissal_info": "c Suryakumar Yadav b Hardik Pandya",
+          "is_out": true,
+          "is_captain": false,
+          "is_keeper": false,
+          "position": 6,
+          "profile_id": 6349
+        },
+        {
+          "name": "Marco Jansen",
+          "runs": 2,
+          "balls": 4,
+          "fours": 0,
+          "sixes": 0,
+          "strike_rate": 50.0,
+          "dismissal_info": "b Bumrah",
+          "is_out": true,
+          "is_captain": false,
+          "is_keeper": false,
+          "position": 7,
+          "profile_id": 14565
+        },
+        {
+          "name": "Keshav Maharaj",
+          "runs": 2,
+          "balls": 7,
+          "fours": 0,
+          "sixes": 0,
+          "strike_rate": 28.57,
+          "dismissal_info": "not out",
+          "is_out": false,
+          "is_captain": false,
+          "is_keeper": false,
+          "position": 8,
+          "profile_id": 9720
+        },
+        {
+          "name": "Kagiso Rabada",
+          "runs": 4,
+          "balls": 3,
+          "fours": 1,
+          "sixes": 0,
+          "strike_rate": 133.33,
+          "dismissal_info": "c Suryakumar Yadav b Hardik Pandya",
+          "is_out": true,
+          "is_captain": false,
+          "is_keeper": false,
+          "position": 9,
+          "profile_id": 9585
+        },
+        {
+          "name": "Anrich Nortje",
+          "runs": 1,
+          "balls": 1,
+          "fours": 0,
+          "sixes": 0,
+          "strike_rate": 100.0,
+          "dismissal_info": "not out",
+          "is_out": false,
+          "is_captain": false,
+          "is_keeper": false,
+          "position": 10,
+          "profile_id": 11427
+        }
+      ],
+      "bowlers": [
+        {
+          "name": "Arshdeep Singh",
+          "overs": 4.0,
+          "maidens": 0,
+          "runs": 20,
+          "wickets": 2,
+          "noballs": 0,
+          "wides": 0,
+          "economy": 5.0,
+          "profile_id": 13217
+        },
+        {
+          "name": "Jasprit Bumrah",
+          "overs": 4.0,
+          "maidens": 0,
+          "runs": 18,
+          "wickets": 2,
+          "noballs": 0,
+          "wides": 0,
+          "economy": 4.5,
+          "profile_id": 9311
+        },
+        {
+          "name": "Axar Patel",
+          "overs": 4.0,
+          "maidens": 0,
+          "runs": 49,
+          "wickets": 1,
+          "noballs": 0,
+          "wides": 2,
+          "economy": 12.2,
+          "profile_id": 8808
+        },
+        {
+          "name": "Kuldeep Yadav",
+          "overs": 4.0,
+          "maidens": 0,
+          "runs": 45,
+          "wickets": 0,
+          "noballs": 0,
+          "wides": 0,
+          "economy": 11.2,
+          "profile_id": 8292
+        },
+        {
+          "name": "Hardik Pandya",
+          "overs": 3.0,
+          "maidens": 0,
+          "runs": 20,
+          "wickets": 3,
+          "noballs": 1,
+          "wides": 1,
+          "economy": 6.7,
+          "profile_id": 9647
+        },
+        {
+          "name": "Ravindra Jadeja",
+          "overs": 1.0,
+          "maidens": 0,
+          "runs": 12,
+          "wickets": 0,
+          "noballs": 0,
+          "wides": 0,
+          "economy": 12.0,
+          "profile_id": 587
+        }
+      ],
+      "fall_of_wickets": [
+        {
+          "batter": "Reeza Hendricks",
+          "score": "7-1",
+          "team_score": 7,
+          "wicket_number": 1,
+          "overs": "1.3"
+        },
+        {
+          "batter": "Aiden Markram",
+          "score": "12-2",
+          "team_score": 12,
+          "wicket_number": 2,
+          "overs": "2.3"
+        },
+        {
+          "batter": "Tristan Stubbs",
+          "score": "70-3",
+          "team_score": 70,
+          "wicket_number": 3,
+          "overs": "8.5"
+        },
+        {
+          "batter": "Quinton de Kock",
+          "score": "106-4",
+          "team_score": 106,
+          "wicket_number": 4,
+          "overs": "12.3"
+        },
+        {
+          "batter": "Heinrich Klaasen",
+          "score": "151-5",
+          "team_score": 151,
+          "wicket_number": 5,
+          "overs": "16.1"
+        },
+        {
+          "batter": "Marco Jansen",
+          "score": "156-6",
+          "team_score": 156,
+          "wicket_number": 6,
+          "overs": "17.4"
+        },
+        {
+          "batter": "David Miller",
+          "score": "161-7",
+          "team_score": 161,
+          "wicket_number": 7,
+          "overs": "19.1"
+        },
+        {
+          "batter": "Kagiso Rabada",
+          "score": "168-8",
+          "team_score": 168,
+          "wicket_number": 8,
+          "overs": "19.5"
+        }
+      ],
+      "partnerships": [
+        {
+          "wicket_number": 1,
+          "batter1": "Reeza Hendricks",
+          "batter2": "de Kock",
+          "runs": 7,
+          "balls": 9,
+          "batter1_runs": 4,
+          "batter2_runs": 1
+        },
+        {
+          "wicket_number": 2,
+          "batter1": "Markram",
+          "batter2": "de Kock",
+          "runs": 5,
+          "balls": 6,
+          "batter1_runs": 4,
+          "batter2_runs": 1
+        },
+        {
+          "wicket_number": 3,
+          "batter1": "Tristan Stubbs",
+          "batter2": "de Kock",
+          "runs": 58,
+          "balls": 38,
+          "batter1_runs": 31,
+          "batter2_runs": 27
+        },
+        {
+          "wicket_number": 4,
+          "batter1": "Klaasen",
+          "batter2": "de Kock",
+          "runs": 36,
+          "balls": 23,
+          "batter1_runs": 24,
+          "batter2_runs": 10
+        },
+        {
+          "wicket_number": 5,
+          "batter1": "Klaasen",
+          "batter2": "Miller",
+          "runs": 45,
+          "balls": 22,
+          "batter1_runs": 28,
+          "batter2_runs": 15
+        },
+        {
+          "wicket_number": 6,
+          "batter1": "Marco Jansen",
+          "batter2": "Miller",
+          "runs": 5,
+          "balls": 9,
+          "batter1_runs": 2,
+          "batter2_runs": 3
+        },
+        {
+          "wicket_number": 7,
+          "batter1": "Maharaj",
+          "batter2": "Miller",
+          "runs": 5,
+          "balls": 9,
+          "batter1_runs": 2,
+          "batter2_runs": 3
+        },
+        {
+          "wicket_number": 8,
+          "batter1": "Maharaj",
+          "batter2": "Rabada",
+          "runs": 7,
+          "balls": 4,
+          "batter1_runs": 0,
+          "batter2_runs": 4
+        },
+        {
+          "wicket_number": 9,
+          "batter1": "Maharaj",
+          "batter2": "Nortje",
+          "runs": 1,
+          "balls": 1,
+          "batter1_runs": 0,
+          "batter2_runs": 1
+        }
+      ],
+      "powerplays": [
+        {
+          "type": "Mandatory",
+          "overs": "0.1 - 6",
+          "runs": 42
+        }
+      ],
+      "did_not_bat": [
+        "Tabraiz Shamsi"
+      ],
       "balls": [
         {
           "runs": 0,

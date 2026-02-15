@@ -1,0 +1,327 @@
+{
+  "state": {
+    "batting_team": "South Africa",
+    "bowling_team": "India",
+    "target": 177,
+    "total_runs": 156,
+    "wickets": 6,
+    "overs_completed": 18,
+    "balls_in_current_over": 0,
+    "total_balls_bowled": 108,
+    "last_6_balls": [0, 0, 1, 0, 0, 1],
+    "consecutive_dots": 0,
+    "current_over_runs": 0,
+    "current_over_wickets": 0,
+    "batsmen": {
+      "Reeza Hendricks": {
+        "name": "Reeza Hendricks",
+        "runs": 4,
+        "balls_faced": 5,
+        "fours": 1,
+        "sixes": 0,
+        "dots": 2,
+        "is_out": true,
+        "position": 1
+      },
+      "de Kock": {
+        "name": "de Kock",
+        "runs": 39,
+        "balls_faced": 31,
+        "fours": 5,
+        "sixes": 1,
+        "dots": 9,
+        "is_out": true,
+        "position": 2
+      },
+      "Markram": {
+        "name": "Markram",
+        "runs": 4,
+        "balls_faced": 5,
+        "fours": 1,
+        "sixes": 0,
+        "dots": 3,
+        "is_out": true,
+        "position": 3
+      },
+      "Tristan Stubbs": {
+        "name": "Tristan Stubbs",
+        "runs": 31,
+        "balls_faced": 21,
+        "fours": 4,
+        "sixes": 1,
+        "dots": 5,
+        "is_out": true,
+        "position": 4
+      },
+      "Klaasen": {
+        "name": "Klaasen",
+        "runs": 51,
+        "balls_faced": 26,
+        "fours": 7,
+        "sixes": 5,
+        "dots": 7,
+        "is_out": true,
+        "position": 5
+      },
+      "Miller": {
+        "name": "Miller",
+        "runs": 18,
+        "balls_faced": 14,
+        "fours": 2,
+        "sixes": 1,
+        "dots": 5,
+        "is_out": false,
+        "position": 6
+      },
+      "Marco Jansen": {
+        "name": "Marco Jansen",
+        "runs": 2,
+        "balls_faced": 4,
+        "fours": 0,
+        "sixes": 0,
+        "dots": 1,
+        "is_out": true,
+        "position": 7
+      },
+      "Maharaj": {
+        "name": "Maharaj",
+        "runs": 1,
+        "balls_faced": 2,
+        "fours": 0,
+        "sixes": 0,
+        "dots": 1,
+        "is_out": false,
+        "position": 8
+      }
+    },
+    "bowlers": {
+      "Arshdeep Singh": {
+        "name": "Arshdeep Singh",
+        "balls_bowled": 18,
+        "runs_conceded": 17,
+        "wickets": 2,
+        "maidens": 0,
+        "dots": 6,
+        "fours_conceded": 2,
+        "sixes_conceded": 0,
+        "wides": 0,
+        "noballs": 0
+      },
+      "Bumrah": {
+        "name": "Bumrah",
+        "balls_bowled": 24,
+        "runs_conceded": 19,
+        "wickets": 2,
+        "maidens": 0,
+        "dots": 11,
+        "fours_conceded": 2,
+        "sixes_conceded": 0,
+        "wides": 0,
+        "noballs": 0
+      },
+      "Axar": {
+        "name": "Axar",
+        "balls_bowled": 24,
+        "runs_conceded": 50,
+        "wickets": 1,
+        "maidens": 0,
+        "dots": 6,
+        "fours_conceded": 8,
+        "sixes_conceded": 3,
+        "wides": 2,
+        "noballs": 0
+      },
+      "Kuldeep Yadav": {
+        "name": "Kuldeep Yadav",
+        "balls_bowled": 24,
+        "runs_conceded": 45,
+        "wickets": 0,
+        "maidens": 0,
+        "dots": 6,
+        "fours_conceded": 6,
+        "sixes_conceded": 3,
+        "wides": 0,
+        "noballs": 0
+      },
+      "Hardik Pandya": {
+        "name": "Hardik Pandya",
+        "balls_bowled": 12,
+        "runs_conceded": 13,
+        "wickets": 1,
+        "maidens": 0,
+        "dots": 4,
+        "fours_conceded": 1,
+        "sixes_conceded": 1,
+        "wides": 0,
+        "noballs": 1
+      },
+      "Jadeja": {
+        "name": "Jadeja",
+        "balls_bowled": 6,
+        "runs_conceded": 12,
+        "wickets": 0,
+        "maidens": 0,
+        "dots": 0,
+        "fours_conceded": 1,
+        "sixes_conceded": 1,
+        "wides": 0,
+        "noballs": 0
+      }
+    },
+    "current_batsman": "Maharaj",
+    "current_bowler": "Bumrah",
+    "non_striker": "Miller",
+    "previous_batsman": "Maharaj",
+    "previous_bowler": "Bumrah",
+    "partnership_runs": 1,
+    "partnership_balls": 2,
+    "partnership_number": 7,
+    "fall_of_wickets": [
+      {
+        "wicket_number": 1,
+        "batsman": "Reeza Hendricks",
+        "batsman_runs": 4,
+        "team_score": 7,
+        "overs": "1.3",
+        "bowler": "Bumrah",
+        "how": "bowled"
+      },
+      {
+        "wicket_number": 2,
+        "batsman": "Markram",
+        "batsman_runs": 4,
+        "team_score": 12,
+        "overs": "2.3",
+        "bowler": "Arshdeep Singh",
+        "how": "caught"
+      },
+      {
+        "wicket_number": 3,
+        "batsman": "Tristan Stubbs",
+        "batsman_runs": 31,
+        "team_score": 70,
+        "overs": "8.5",
+        "bowler": "Axar",
+        "how": "bowled"
+      },
+      {
+        "wicket_number": 4,
+        "batsman": "de Kock",
+        "batsman_runs": 39,
+        "team_score": 105,
+        "overs": "12.3",
+        "bowler": "Arshdeep Singh",
+        "how": "caught"
+      },
+      {
+        "wicket_number": 5,
+        "batsman": "Klaasen",
+        "batsman_runs": 51,
+        "team_score": 150,
+        "overs": "16.1",
+        "bowler": "Hardik Pandya",
+        "how": "caught"
+      },
+      {
+        "wicket_number": 6,
+        "batsman": "Marco Jansen",
+        "batsman_runs": 2,
+        "team_score": 155,
+        "overs": "17.4",
+        "bowler": "Bumrah",
+        "how": "bowled"
+      }
+    ],
+    "over_runs_history": [
+      6, 5, 3, 8, 10, 10, 7, 13, 9, 9, 12, 8, 8, 14, 24, 4, 4, 2
+    ],
+    "total_fours": 20,
+    "total_sixes": 8,
+    "total_extras": 6,
+    "total_wides": 2,
+    "total_noballs": 1,
+    "balls_since_last_boundary": 19,
+    "balls_since_last_wicket": 2,
+    "batting_order": [
+      "Reeza Hendricks",
+      "de Kock",
+      "Markram",
+      "Tristan Stubbs",
+      "Klaasen",
+      "Miller",
+      "Marco Jansen",
+      "Maharaj"
+    ],
+    "is_new_bowler": false,
+    "is_new_over": false,
+    "is_strike_change": false,
+    "is_new_batsman": false,
+    "new_batsman_name": null,
+    "previous_over_summary": "Over 17: 2 runs, 1 wicket(s). Bowler: Bumrah \u2014 figures: 2/19 (4.0)"
+  },
+  "logic": {
+    "branch": "over_transition",
+    "is_pivot": false,
+    "equation_shift": null,
+    "context_notes": "Phase: death. MATCH SITUATION: TIGHT \u2014 need 21 off 12 balls at 10.5 RPO, game in the balance. Maharaj: 1(2) SR 50.0. Bowler Bumrah: 2/19 (4.0) econ 4.75, 11 dots. 7th wicket partnership: 1 off 2b. Last 6 balls: 2 runs [0, 0, 1, 0, 0, 1]. BOUNDARY DROUGHT: 19 balls without a boundary!. Scoring is decelerating. Last 3 overs: 3.33 RPO (vs match CRR 8.67). Extras so far: 6 (2w, 1nb). Need 21 from 12 balls (RRR 10.5)"
+  },
+  "event_description": "Single",
+  "score_data": {
+    "total_runs": 156,
+    "wickets": 6,
+    "overs": "18.0",
+    "crr": 8.67,
+    "rrr": 10.5,
+    "runs_needed": 21,
+    "balls_remaining": 12,
+    "batting_team": "South Africa",
+    "bowling_team": "India",
+    "target": 177,
+    "match_phase": "death",
+    "batsman": "Maharaj",
+    "bowler": "Bumrah",
+    "ball_runs": 1,
+    "is_wicket": false,
+    "is_boundary": false,
+    "is_six": false,
+    "branch": "over_transition",
+    "is_pivot": false,
+    "striker": {
+      "name": "Maharaj",
+      "runs": 1,
+      "balls": 2,
+      "fours": 0,
+      "sixes": 0,
+      "sr": 50.0
+    },
+    "non_striker": {
+      "name": "Miller",
+      "runs": 18,
+      "balls": 14,
+      "fours": 2,
+      "sixes": 1,
+      "sr": 128.6
+    },
+    "bowler_stats": {
+      "name": "Bumrah",
+      "overs": "4.0",
+      "runs": 19,
+      "wickets": 2,
+      "econ": 4.8
+    }
+  },
+  "match_over": false,
+  "narratives": [
+    {
+      "type": "end_of_over",
+      "branch": "over_transition",
+      "kwargs": {
+        "over_runs": 2,
+        "over_wickets": 1,
+        "bowler": "Bumrah",
+        "bowler_figures": "2/19 (4.0)",
+        "phase_info": "Phase: death"
+      }
+    }
+  ]
+}

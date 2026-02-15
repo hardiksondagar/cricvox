@@ -175,6 +175,16 @@
     box-shadow: 0 0 0 2px rgba(139,92,246,0.3);
 }
 
+/* Ball pending state — shown before commentary text arrives */
+.feed-item.feed-ball-pending .feed-ball-indicator {
+    opacity: 0.5;
+}
+.feed-text.feed-text-pending {
+    color: #404040;
+    font-size: 0.8rem;
+    font-style: italic;
+}
+
 /* Narrative moments */
 .feed-narrative .feed-text { font-style: italic; color: #e5e5e5; }
 
@@ -304,4 +314,358 @@
 @media (max-width: 768px) {
     .match-end-card { padding: 32px; }
     .match-end-card h2 { font-size: 1.5rem; }
+}
+
+
+/* ================================================================== */
+/*  TIMELINE PROGRESS BAR — Fixed bottom audio player                 */
+/* ================================================================== */
+
+.timeline-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 56px;
+    padding: 0 16px;
+    background: rgba(10, 10, 10, 0.92);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.timeline-bar.hidden {
+    display: none;
+}
+
+/* Left controls: Language + Play/Pause */
+.timeline-left-controls {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Play / Pause button */
+.timeline-play-btn {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.timeline-play-btn:hover {
+    background: rgba(16, 185, 129, 0.3);
+    transform: scale(1.08);
+}
+
+/* Track area: wraps labels, track, and tooltip */
+.timeline-track-area {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 0;
+}
+
+/* Innings labels row — hidden, separator dot used instead */
+.timeline-innings-labels {
+    display: none;
+}
+
+/* Track container: the actual progress bar */
+.timeline-track-container {
+    position: relative;
+    width: 100%;
+    height: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    overflow: visible;
+}
+
+.timeline-track-bg {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+}
+
+/* Filled region — commentary available */
+.timeline-filled {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: rgba(16, 185, 129, 0.25);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    pointer-events: none;
+}
+
+/* Badge markers container */
+.timeline-badges {
+    position: absolute;
+    top: -4px;
+    left: 0;
+    right: 0;
+    height: 16px;
+    pointer-events: none;
+}
+
+.timeline-badge {
+    position: absolute;
+    top: 50%;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.7;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.timeline-badge.badge-wicket   { background: #f87171; box-shadow: 0 0 4px rgba(248,113,113,0.4); }
+.timeline-badge.badge-six      { background: #a78bfa; box-shadow: 0 0 4px rgba(167,139,250,0.3); }
+
+/* Innings separator — rendered as a dot like wicket/six badges */
+.timeline-innings-sep {
+    position: absolute;
+    top: -4px;
+    left: 0;
+    right: 0;
+    height: 16px;
+    pointer-events: none;
+}
+
+.timeline-innings-sep-dot {
+    position: absolute;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fbbf24;
+    box-shadow: 0 0 5px rgba(251, 191, 36, 0.5);
+    transform: translate(-50%, -50%);
+}
+
+/* Playback cursor / thumb */
+.timeline-cursor {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 14px;
+    height: 14px;
+    margin-top: -7px;
+    margin-left: -7px;
+    border-radius: 50%;
+    background: #34d399;
+    border: 2px solid #0a0a0a;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+    transition: left 0.2s ease;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.timeline-cursor.hidden {
+    display: none;
+}
+
+/* Hover tooltip */
+.timeline-tooltip {
+    position: absolute;
+    bottom: 24px;
+    left: 0;
+    transform: translateX(-50%);
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 8px 12px;
+    pointer-events: none;
+    z-index: 10;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.timeline-tooltip.hidden {
+    display: none;
+}
+
+.timeline-tooltip-over {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #e5e5e5;
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.timeline-tooltip-players {
+    font-size: 0.65rem;
+    color: #737373;
+    font-weight: 500;
+}
+
+.timeline-tooltip-event {
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.timeline-tooltip-event.event-wicket   { color: #f87171; }
+.timeline-tooltip-event.event-four     { color: #34d399; }
+.timeline-tooltip-event.event-six      { color: #a78bfa; }
+.timeline-tooltip-event.event-runs     { color: #60a5fa; }
+.timeline-tooltip-event.event-dot      { color: #525252; }
+.timeline-tooltip-event.event-unavail  { color: #525252; font-style: italic; }
+
+.tooltip-badge {
+    display: inline-block;
+    font-size: 0.55rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tooltip-badge.tb-wicket { background: rgba(239,68,68,0.15); color: #f87171; }
+.tooltip-badge.tb-four   { background: rgba(16,185,129,0.15); color: #34d399; }
+.tooltip-badge.tb-six    { background: rgba(139,92,246,0.15); color: #a78bfa; }
+
+/* Right controls */
+.timeline-right-controls {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Language selector in timeline — pill shape matching play/pause */
+.timeline-lang-select {
+    height: 36px;
+    padding: 0 10px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    border-radius: 999px;
+    color: #a3a3a3;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.15s ease;
+    -webkit-appearance: none;
+    appearance: none;
+    padding-right: 22px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' fill='none'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%23737373' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+}
+.timeline-lang-select:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+.timeline-lang-select option {
+    background: #171717;
+    color: #d4d4d4;
+}
+
+/* Live badge in timeline */
+.timeline-live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #f87171;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.timeline-live-badge.hidden {
+    display: none;
+}
+
+.timeline-live-dot {
+    width: 6px;
+    height: 6px;
+    background: #f87171;
+    border-radius: 50%;
+    animation: livePulse 1.4s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.4; transform: scale(0.8); }
+}
+
+/* Go Live button */
+.timeline-go-live {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #f87171;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 4px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-transform: uppercase;
+}
+.timeline-go-live:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+}
+.timeline-go-live.hidden {
+    display: none;
+}
+
+/* Dragging state */
+.timeline-track-container:hover .timeline-cursor {
+    transform: scale(1.15);
+}
+.timeline-track-container.dragging .timeline-cursor {
+    transition: none;
+    transform: scale(1.3);
+}
+
+/* Expand track hit area on hover for easier clicking */
+.timeline-track-container::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    bottom: -8px;
+    left: 0;
+    right: 0;
+}
+
+@media (max-width: 768px) {
+    .timeline-bar {
+        height: 52px;
+        padding: 0 10px;
+        gap: 8px;
+    }
+    .timeline-play-btn {
+        width: 32px;
+        height: 32px;
+    }
+    .timeline-right-controls {
+        gap: 4px;
+    }
 }

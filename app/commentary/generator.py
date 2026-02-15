@@ -118,14 +118,14 @@ async def generate_narrative(
 def _fallback_commentary(ball: BallEvent, logic_result: LogicResult) -> str:
     """Generate basic fallback commentary when the API fails."""
     if ball.is_wicket:
-        return f"Wicket! {ball.dismissal_batsman or ball.batsman} is out, {ball.wicket_type}."
+        return f"Wicket! {ball.dismissal_batter or ball.batter} is out, {ball.wicket_type}."
     if ball.is_six:
-        return f"{ball.batsman} smashes it for six!"
+        return f"{ball.batter} smashes it for six!"
     if ball.is_boundary:
-        return f"{ball.batsman} finds the boundary for four."
+        return f"{ball.batter} finds the boundary for four."
     if ball.runs == 0 and ball.extras == 0:
         return f"Dot ball from {ball.bowler}. Good delivery."
-    return f"{ball.batsman} picks up {ball.runs + ball.extras} run(s)."
+    return f"{ball.batter} picks up {ball.runs + ball.extras} run(s)."
 
 
 def _fallback_narrative(moment_type: str, state: MatchState | None, **kwargs) -> str:
@@ -152,14 +152,14 @@ def _fallback_narrative(moment_type: str, state: MatchState | None, **kwargs) ->
                 f"{bt} {state.total_runs}/{state.wickets}."
             )
         return "End of the over."
-    if moment_type == "new_batsman":
-        name = kwargs.get("new_batsman", "The new batsman")
+    if moment_type == "new_batter":
+        name = kwargs.get("new_batter", "The new batter")
         return f"{name} walks out to the middle."
     if moment_type == "phase_change":
         phase = state.match_phase if state else ""
         return f"{phase.title()} overs begin."
     if moment_type == "milestone":
-        name = kwargs.get("batsman_name", "The batsman")
+        name = kwargs.get("batter_name", "The batter")
         mtype = kwargs.get("milestone_type", "milestone")
         return f"{mtype} for {name}!"
     return ""

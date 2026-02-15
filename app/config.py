@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     elevenlabs_api_key: str = ""
     sarvam_api_key: str = ""
+    firecrawl_api_key: str = ""
     ball_delay_seconds: float = 20.0
 
     # Legacy fallbacks — only used if languages.json voice_id is empty

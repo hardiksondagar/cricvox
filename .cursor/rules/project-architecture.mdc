@@ -1,139 +1,157 @@
 ---
-description: AI Cricket Commentary Engine — full project architecture, design decisions, and conventions
+description: AI Cricket Commentary Engine (CricVox) — full project architecture, design decisions, and conventions
 alwaysApply: true
 ---
 
-# AI Cricket Commentary Engine — Project Reference
+# AI Cricket Commentary Engine (CricVox) — Project Reference
 
 ## Overview
 
-Real-time AI cricket commentary engine that replays T20 match ball-by-ball with LLM-generated commentary and TTS audio. Built with Python 3.11+, FastAPI, OpenAI GPT-4o-mini, and ElevenLabs v3 TTS.
+Real-time AI cricket commentary engine that replays T20 match ball-by-ball with LLM-generated commentary and TTS audio. Built with Python 3.11+, FastAPI, OpenAI GPT-4.1, and multi-vendor TTS (ElevenLabs, Sarvam, OpenAI).
 
 ## Tech Stack
 
 - **Backend**: FastAPI + Uvicorn (async)
-- **LLM**: OpenAI GPT-4o-mini (ball commentary + narrative moments)
-- **TTS**: ElevenLabs v3 (`eleven_v3` model, stability: 0.0/0.5/1.0)
-- **Frontend**: Vanilla HTML/CSS/JS with SSE for real-time updates
+- **LLM**: OpenAI GPT-4.1 (ball commentary + narrative moments)
+- **TTS**: ElevenLabs v3, Sarvam Bulbul v3, OpenAI gpt-4o-mini-tts
+- **Frontend**: Vanilla HTML/CSS/JS + Tailwind CDN, polling-based updates
+- **Database**: SQLite via aiosqlite (normalized schema)
+- **Testing**: pytest + pytest-asyncio (38 tests)
 - **Config**: pydantic-settings with `.env`
+
+## Terminology
+
+- **batter** (not batsman) — gender-neutral
+- **deliveries** (not balls) — cricket standard for the DB/API layer
 
 ## File Structure
 
 ```
 app/
-  main.py              — FastAPI app, match loop, SSE broadcast, narrative injection
+  main.py              — FastAPI app, all REST API endpoints
   config.py            — Settings (API keys, delays) via pydantic-settings
-  models.py            — All Pydantic models (BallEvent, MatchState, BatsmanStats, BowlerStats, etc.)
+  models.py            — All Pydantic models (BallEvent, MatchState, BatterStats, BowlerStats, etc.)
+  generate.py          — Offline generation pipeline (LLM + TTS per language)
   engine/
-    state_manager.py   — Ball-by-ball state tracking (score, partnerships, FOW, bowler/batsman stats)
-    logic_engine.py    — Classifies NarrativeBranch, builds selective context notes for LLM
-    pivot_detector.py  — Detects pivot/equation-shift moments
+    state_manager.py   — Ball-by-ball state tracking (score, batters, bowlers, partnerships, FOW)
+    logic_engine.py    — NarrativeBranch classification, selective context notes for LLM
+    pivot_detector.py  — Pivot/equation-shift moment detection
+    precompute.py      — Deterministic state precomputation (state + logic + narratives)
   commentary/
     prompts.py         — SYSTEM_PROMPT, USER_PROMPT_TEMPLATE, NARRATIVE_SYSTEM_PROMPT, all templates
-    generator.py       — generate_commentary() for balls, generate_narrative() for moments
+    generator.py       — OpenAI GPT-4.1 commentary + narrative generation
   audio/
-    tts.py             — ElevenLabs v3 TTS with stability mapped to NarrativeBranch
+    tts.py             — TTS facade — routes to provider based on language config
+    elevenlabs.py      — ElevenLabs v3 provider
+    sarvam.py          — Sarvam Bulbul v3 provider
+    openai_tts.py      — OpenAI gpt-4o-mini-tts provider
     phonetics.py       — Player name pronunciation helpers
-  feed/
-    mock_feed.py       — Loads JSON match data, computes first innings summary
-    ind_vs_sa_final.json — T20 World Cup 2024 Final match data
+  storage/
+    database.py        — SQLite schema, all CRUD, migrations
+    audio.py           — Content-hashed MP3 file storage + deduplication
+scripts/
+  load_match.py        — Loads JSON match data into DB via API endpoints
+data/
+  languages.json       — Language configs (code, name, tts_vendor, voice_id, etc.)
+  matches.db           — SQLite database (gitignored)
+  sample/
+    ind_vs_sa_final.json — T20 World Cup 2024 Final ball-by-ball data
+tests/
+  conftest.py          — Shared fixtures (per-test SQLite, AsyncClient, seed data)
+  test_database.py     — 14 database CRUD unit tests
+  test_api.py          — 13 API integration tests
+  test_engine.py       — 11 engine unit tests (StateManager, LogicEngine, precompute)
 static/
-  index.html           — Dashboard UI
-  app.js               — SSE client, audio queue, scoreboard updates
-  style.css            — Dark theme UI styles
+  index.html           — SPA dashboard (Tailwind CSS, dark theme)
+  app.js               — Polling client, audio queue, scoreboard, timeline progress bar
+  style.css            — Dark theme styles
 ```
+
+## Database Schema (normalized)
+
+- **matches**: match_id, title, status, match_info (JSON), languages (JSON), venue, format, team1, team2, match_date, created_at
+- **deliveries**: id, match_id, innings, ball_index, over, ball, batter, bowler, non_batter, batter_id, non_batter_id, bowler_id, runs, extras, extras_type, is_wicket, is_boundary, is_six, total_runs, total_wickets, overs_completed, balls_in_over, crr, rrr, runs_needed, balls_remaining, match_phase, data (JSON), context (JSON)
+- **match_commentaries**: id, match_id, ball_id (FK), seq, event_type, language, text, audio_url, data (JSON), created_at
+- **innings_batters**: match_id, innings, name, position, runs, balls_faced, fours, sixes, dots, is_out, strike_rate, out_status, dismissal_info
+- **innings_bowlers**: match_id, innings, name, balls_bowled, runs_conceded, wickets, maidens, dots, economy, overs_bowled
+- **fall_of_wickets**: match_id, innings, wicket_number, batter, batter_runs, team_score, overs, bowler, how
+- **innings**: match_id, innings_number, batting_team, bowling_team, total_runs, total_wickets, total_overs, extras_total
+- **partnerships**: match_id, innings, wicket_number, batter1, batter2, runs, balls
 
 ## Core Architecture
 
-### Match Loop (`main.py::_run_match`)
-
-1. **Fast-forward** — silently process balls before `start_over` through StateManager (no LLM/TTS)
-2. **Pre-match narratives** (only when start_over=1):
-   - `first_innings_start` → `first_innings_end` → `second_innings_start`
-3. **Ball-by-ball loop** — for each ball:
-   - StateManager.update(ball) → LogicEngine.analyze() → generate_commentary() → synthesize_speech() → broadcast SSE
-4. **Post-ball narrative triggers** (in order):
-   - Milestone (50/100) → New Batsman (after wicket) → End of Over / Phase Change
-5. **Match result** — `match_result` narrative at the end
-
-When `start_over > 1`: skip all narratives, just send score_update to sync frontend, start ball loop.
+### Pipeline Flow
+```
+JSON feed → scripts/load_match.py → API endpoints → SQLite
+  → precompute (state + logic + narratives) auto on insertion
+  → generate (LLM commentary × N languages + TTS × N languages)
+  → store commentaries → frontend polls + plays audio
+```
 
 ### StateManager (`engine/state_manager.py`)
 
-Tracks everything a commentator would know from THIS match:
+Tracks everything a commentator would know:
 - Score, overs, run rates (CRR, RRR)
-- Per-batsman: runs, balls, 4s, 6s, dots, dot%, strike rate, position, milestones
+- Per-batter: runs, balls, 4s, 6s, dots, dot%, strike rate, position, milestones
 - Per-bowler: balls, runs, wickets, maidens, dots, dot%, fours/sixes conceded, wides, noballs, economy
-- Partnership: runs, balls, partnership number (1st/2nd/etc.)
-- Fall of wickets log: batsman, score, team total, overs, how
-- Over-by-over run history → phase runs (PP/middle/death), run rate windows (last 3/5 overs)
-- Boundary drought: balls_since_last_boundary, is_boundary_drought (18+ balls)
-- Wicket proximity: balls_since_last_wicket, is_collapse (3+ in 18 balls)
-- Total boundaries, extras breakdown (wides, noballs)
-- Scoring momentum: accelerating/decelerating/steady
-- Batting order, commentary history (last 6 lines)
-- Transition flags: is_new_bowler, is_new_over, is_strike_change, is_new_batsman
+- Partnership: runs, balls, partnership number (resets on wicket)
+- Fall of wickets: batter, score, team total, overs, how
+- Over-by-over run history → phase runs (PP/middle/death), run rate windows
+- Transition flags: is_new_bowler, is_new_over, is_strike_change, is_new_batter
 
 ### LogicEngine (`engine/logic_engine.py`)
 
-- Classifies each ball into NarrativeBranch: ROUTINE, BOUNDARY_MOMENTUM, WICKET_DRAMA, PRESSURE_BUILDER, OVER_TRANSITION, EXTRA_GIFT
-- Builds **selective** context notes — NOT everything every ball:
-  - On wickets: ONLY dismissal info, FOW, collapse, partnership broken. NO dots/pressure/boundary drought.
-  - Sections 7-8 (momentum, innings stats) are gated with `if not ball.is_wicket`
-  - Boundary drought only after 12+ balls, flagged at 18+
-  - Dot% only when high and batsman has 10+ balls
-  - Phase summary only at transitions
+- Classifies each delivery: ROUTINE, BOUNDARY_MOMENTUM, WICKET_DRAMA, PRESSURE_BUILDER, OVER_TRANSITION, EXTRA_GIFT
+- Builds **selective** context notes — NOT everything every ball
+- On wickets: ONLY dismissal info, FOW, collapse. NO dots/pressure/boundary drought.
 
-### Commentary Prompts (`commentary/prompts.py`)
+### Precompute (`engine/precompute.py`)
 
-- **SYSTEM_PROMPT**: Core principle = LLM gets ONLY bare score data, must NOT invent shots/deliveries/fielding
-- **CONTEXT RULES**: Phase-by-phase rules (PP, middle, death) for when to mention pressure, RRR, etc.
-- **REPETITION RULES**: LLM sees last 5 commentary lines and must not repeat phrases
-- **USER_PROMPT_TEMPLATE**: Score line with CRR+RRR, ball event, branch, context notes, recent commentary
-- **NARRATIVE_SYSTEM_PROMPT + NARRATIVE_PROMPTS**: 8 distinct narrative moment templates
-
-### Narrative Moments
-
-| Moment | When | Notes |
-|--------|------|-------|
-| `first_innings_start` | Before any ball (start_over=1 only) | Scene-setting, venue, teams |
-| `first_innings_end` | After 1st innings start | Top scorers/bowlers computed from innings 1 data |
-| `second_innings_start` | Before chase begins (start_over=1 only) | Target, challenge ahead |
-| `end_of_over` | After every completed over | Over summary, bowler figures |
-| `new_batsman` | After every wicket | Situation they walk into |
-| `phase_change` | PP→Middle, Middle→Death | Replaces end_of_over |
-| `milestone` | Batsman reaches 50/100 | Celebration |
-| `match_result` | Match ends | Final result, highlights |
-
-### TTS (`audio/tts.py`)
-
-ElevenLabs v3 with discrete stability:
-- 0.0 (Creative) — wickets, boundaries, pivots
-- 0.5 (Natural) — pressure, over transitions
-- 1.0 (Robust) — routine balls
+- Runs StateManager + LogicEngine over deliveries, stores context in `deliveries.context`
+- Also populates: `innings_batters`, `innings_bowlers`, `fall_of_wickets`, `innings`, `partnerships`
+- Auto-triggered on delivery insertion (single or bulk)
 
 ### API Endpoints
 
-- `POST /api/start?start_over=N` — start from over N (1-indexed, default 1)
-- `POST /api/stop` — stop replay
-- `GET /api/stream` — SSE stream (events: match_start, score_update, commentary, match_end)
-- `GET /api/status` — is match running?
-- `GET /api/match-info` — match metadata
+**Matches:** POST create, GET list/detail, PATCH update, DELETE (cascades)
+**Deliveries:** POST single (auto-precomputes), POST bulk, GET list/detail
+**Innings Stats:** GET summary, batters, bowlers, fall-of-wickets, partnerships, innings records
+**Commentaries:** GET poll, GET single, DELETE all
+**Generation:** POST match text (background), POST single text, POST match audio (background), POST single audio
+**Other:** GET timeline, GET languages, GET `/api/matches/{id}/full` (everything in one call)
+
+### Narrative Moments
+
+| Moment | When |
+|--------|------|
+| `first_innings_start` | Before any ball (start_over=1 only) |
+| `first_innings_end` | After 1st innings |
+| `second_innings_start` | Before chase begins |
+| `end_of_over` | After every completed over |
+| `new_batter` | After every wicket |
+| `phase_change` | PP→Middle, Middle→Death |
+| `milestone` | Batter reaches 50/100 |
+| `match_result` | Match ends |
 
 ## Key Design Decisions
 
-1. **LLM gets bare facts only** — no shot descriptions, no delivery types. It infers context from stats.
-2. **Context is selective** — logic engine surfaces what matters for THIS ball, not everything.
-3. **Wicket = only story** — on wicket balls, all momentum/dot/boundary noise is suppressed.
-4. **Commentary history** — last 5 lines sent to LLM to prevent repetition and build narrative flow.
-5. **Fast-forward for testing** — `start_over` silently builds state, no narratives when skipping ahead.
-6. **Narrative moments are distinct** — first innings start ≠ second innings start ≠ match result.
-7. **State is comprehensive** — everything a commentator would know from watching the match.
+1. **LLM gets bare facts only** — no shot descriptions. Infers context from stats.
+2. **Context is selective** — logic engine surfaces what matters for THIS delivery.
+3. **Wicket = only story** — on wickets, all momentum/dot/boundary noise suppressed.
+4. **Commentary history** — last 5 lines sent to LLM to prevent repetition.
+5. **Precompute on insert** — context computed when delivery added, not as separate step.
+6. **Normalized schema** — key fields promoted from JSON, stats in dedicated tables.
+7. **Gender-neutral terminology** — `batter` not batsman, `deliveries` not balls.
+8. **Everything is an API** — data loading uses the same endpoints as UI/CLI.
 
 ## Testing
 
-From UI: set "From over" input (1-20), click Start Match.
-- Over 1: full experience with all pre-match narratives
-- Over 7: after powerplay
-- Over 15: start of death overs
-- Over 18+: deep pressure scenarios
+```bash
+python -m pytest tests/ -v         # 38 tests, ~0.7s
+```
+
+- `test_database.py` — 14 CRUD unit tests (all tables)
+- `test_api.py` — 13 integration tests (all endpoints)
+- `test_engine.py` — 11 engine tests (StateManager, LogicEngine, precompute)
+
+Fixtures: per-test isolated SQLite (tmp_path), AsyncClient via ASGITransport, seeded match data.
