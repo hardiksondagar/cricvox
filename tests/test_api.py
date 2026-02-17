@@ -244,8 +244,8 @@ async def test_innings_stats_endpoints(client, seeded_match):
 
 
 @pytest.mark.asyncio
-async def test_timeline(client):
-    """Create match with bulk deliveries, GET timeline, verify structure has innings with deliveries."""
+async def test_commentaries_as_timeline(client):
+    """Create match with bulk deliveries, GET commentaries, verify ball_info includes innings and ball_index."""
     r = await client.post("/api/matches", json={
         "title": "Timeline Test",
         "match_info": {"innings_summary": [
@@ -259,22 +259,29 @@ async def test_timeline(client):
     await client.post(f"/api/matches/{match_id}/deliveries/bulk", json=BULK_DELIVERIES_INNINGS_1)
     await client.post(f"/api/matches/{match_id}/deliveries/bulk", json=BULK_DELIVERIES_INNINGS_2)
 
-    r = await client.get(f"/api/matches/{match_id}/timeline")
+    r = await client.get(f"/api/matches/{match_id}/commentaries?after_seq=0&language=hi")
     assert r.status_code == 200
-    data = r.json()
-    assert "items" in data
-    assert "innings_summary" in data
-    # Should have items: structural events + balls
-    items = data["items"]
-    assert len(items) > 0
-    # Check that ball items have ball_info
-    ball_items = [i for i in items if i["type"] == "ball"]
-    assert len(ball_items) >= 7  # 6 from inn1 + 1 from inn2
-    for bi in ball_items:
-        assert bi["ball_info"] is not None
-    # Check structural events exist
-    event_items = [i for i in items if i["type"] == "event"]
-    assert len(event_items) > 0
+    comms = r.json()
+    assert isinstance(comms, list)
+    assert len(comms) > 0
+
+    # Check delivery commentaries have ball_info with innings and ball_index
+    delivery_comms = [c for c in comms if c["event_type"] == "delivery"]
+    assert len(delivery_comms) >= 7  # 6 from inn1 + 1 from inn2
+    for dc in delivery_comms:
+        assert dc["ball_info"] is not None
+        assert "innings" in dc["ball_info"]
+        assert "ball_index" in dc["ball_info"]
+
+    # Check structural events exist (first_innings_start, end_of_over, etc.)
+    event_comms = [c for c in comms if c["event_type"] != "delivery"]
+    assert len(event_comms) > 0
+
+    # Verify innings_summary is accessible from the match endpoint
+    mr = await client.get(f"/api/matches/{match_id}")
+    assert mr.status_code == 200
+    match_info = mr.json().get("match_info", {})
+    assert "innings_summary" in match_info
 
 
 @pytest.mark.asyncio
@@ -319,11 +326,11 @@ async def test_commentary_crud(client):
 
     r = await client.get(f"/api/matches/{match_id}/commentaries?after_seq=0&language=hi")
     assert r.status_code == 200
-    data = r.json()
-    assert "commentaries" in data
-    assert len(data["commentaries"]) >= 1
+    comms = r.json()
+    assert isinstance(comms, list)
+    assert len(comms) >= 1
     # Find the delivery commentary we inserted (skeletons also have text now)
-    commentary_with_text = [c for c in data["commentaries"] if c.get("text") == "That's a boundary!"]
+    commentary_with_text = [c for c in comms if c.get("text") == "That's a boundary!"]
     assert len(commentary_with_text) >= 1
     c = commentary_with_text[0]
     commentary_id = c["id"]

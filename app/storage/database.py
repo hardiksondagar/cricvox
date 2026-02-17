@@ -1186,7 +1186,8 @@ async def get_commentaries_after(
     db = _get_db()
     if language:
         query = """
-            SELECT c.*, b.over as b_over, b.ball as b_ball,
+            SELECT c.*, b.innings as b_innings, b.ball_index as b_ball_index,
+                   b.over as b_over, b.ball as b_ball,
                    b.batter as b_batter, b.bowler as b_bowler, b.non_batter as b_non_batter,
                    b.runs as b_runs, b.extras as b_extras, b.extras_type as b_extras_type,
                    b.is_wicket as b_is_wicket, b.is_boundary as b_is_boundary, b.is_six as b_is_six,
@@ -1203,7 +1204,8 @@ async def get_commentaries_after(
         params: tuple = (match_id, after_seq, language)
     else:
         query = """
-            SELECT c.*, b.over as b_over, b.ball as b_ball,
+            SELECT c.*, b.innings as b_innings, b.ball_index as b_ball_index,
+                   b.over as b_over, b.ball as b_ball,
                    b.batter as b_batter, b.bowler as b_bowler, b.non_batter as b_non_batter,
                    b.runs as b_runs, b.extras as b_extras, b.extras_type as b_extras_type,
                    b.is_wicket as b_is_wicket, b.is_boundary as b_is_boundary, b.is_six as b_is_six,
@@ -1227,7 +1229,8 @@ async def get_commentary_by_id(commentary_id: int) -> dict | None:
     """Fetch a single commentary row by its ID, joined with delivery data."""
     db = _get_db()
     query = """
-        SELECT c.*, b.over as b_over, b.ball as b_ball,
+        SELECT c.*, b.innings as b_innings, b.ball_index as b_ball_index,
+               b.over as b_over, b.ball as b_ball,
                b.batter as b_batter, b.bowler as b_bowler, b.non_batter as b_non_batter,
                b.runs as b_runs, b.extras as b_extras, b.extras_type as b_extras_type,
                b.is_wicket as b_is_wicket, b.is_boundary as b_is_boundary, b.is_six as b_is_six,
@@ -1256,7 +1259,8 @@ async def get_commentaries_pending_audio(
     db = _get_db()
     if language:
         query = """
-            SELECT c.*, b.over as b_over, b.ball as b_ball,
+            SELECT c.*, b.innings as b_innings, b.ball_index as b_ball_index,
+                   b.over as b_over, b.ball as b_ball,
                    b.batter as b_batter, b.bowler as b_bowler, b.non_batter as b_non_batter,
                    b.runs as b_runs, b.extras as b_extras, b.extras_type as b_extras_type,
                    b.is_wicket as b_is_wicket, b.is_boundary as b_is_boundary, b.is_six as b_is_six,
@@ -1275,7 +1279,8 @@ async def get_commentaries_pending_audio(
         params: tuple = (match_id, language)
     else:
         query = """
-            SELECT c.*, b.over as b_over, b.ball as b_ball,
+            SELECT c.*, b.innings as b_innings, b.ball_index as b_ball_index,
+                   b.over as b_over, b.ball as b_ball,
                    b.batter as b_batter, b.bowler as b_bowler, b.non_batter as b_non_batter,
                    b.runs as b_runs, b.extras as b_extras, b.extras_type as b_extras_type,
                    b.is_wicket as b_is_wicket, b.is_boundary as b_is_boundary, b.is_six as b_is_six,
@@ -1336,7 +1341,8 @@ async def get_commentaries_pending_audio_by_ball_ids(
     placeholders = ",".join("?" * len(ball_ids))
     if language:
         query = f"""
-            SELECT c.*, b.over as b_over, b.ball as b_ball,
+            SELECT c.*, b.innings as b_innings, b.ball_index as b_ball_index,
+                   b.over as b_over, b.ball as b_ball,
                    b.batter as b_batter, b.bowler as b_bowler, b.non_batter as b_non_batter,
                    b.runs as b_runs, b.extras as b_extras, b.extras_type as b_extras_type,
                    b.is_wicket as b_is_wicket, b.is_boundary as b_is_boundary, b.is_six as b_is_six,
@@ -1356,7 +1362,8 @@ async def get_commentaries_pending_audio_by_ball_ids(
         params: list = [match_id] + ball_ids + [language]
     else:
         query = f"""
-            SELECT c.*, b.over as b_over, b.ball as b_ball,
+            SELECT c.*, b.innings as b_innings, b.ball_index as b_ball_index,
+                   b.over as b_over, b.ball as b_ball,
                    b.batter as b_batter, b.bowler as b_bowler, b.non_batter as b_non_batter,
                    b.runs as b_runs, b.extras as b_extras, b.extras_type as b_extras_type,
                    b.is_wicket as b_is_wicket, b.is_boundary as b_is_boundary, b.is_six as b_is_six,
@@ -1684,8 +1691,10 @@ def _row_to_commentary(row: aiosqlite.Row) -> dict:
         ball_runs = (row["b_runs"] or 0) + (row["b_extras"] or 0)
         overs_display = f"{row['b_overs_completed']}.{row['b_balls_in_over']}"
         result["ball_info"] = {
+            "innings": row["b_innings"],
             "over": row["b_over"],
             "ball": row["b_ball"],
+            "ball_index": row["b_ball_index"],
             "batter": row["b_batter"],
             "bowler": row["b_bowler"],
             "non_batter": row["b_non_batter"],

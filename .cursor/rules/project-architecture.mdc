@@ -59,6 +59,7 @@ app/
     audio.py           — Content-hashed MP3 file storage + deduplication
 scripts/
   load_match.py        — Loads JSON match data into DB via API endpoints
+  export_static.py     — Exports generated matches to docs/ for GitHub Pages
 data/
   languages.json       — Language configs (code, name, tts_vendor, voice_id, etc.)
   matches.db           — SQLite database (gitignored)
@@ -124,7 +125,7 @@ Tracks everything a commentator would know:
 **Matches:** POST create, GET list/detail, PATCH update, DELETE (cascades)
 **Deliveries:** POST single (auto-precomputes), POST bulk, GET list/detail
 **Innings Stats:** GET summary, batters, bowlers, fall-of-wickets, partnerships, innings records
-**Commentaries:** GET poll, GET single, DELETE all
+**Commentaries:** GET poll (returns plain array), GET single, DELETE all. No match data in response — use match endpoint for status/metadata.
 
 **Generation (unified):**
 - `POST /api/matches/{id}/generate_commentaries` — overs, innings, delivery_id, generate_audio
@@ -135,12 +136,19 @@ Tracks everything a commentator would know:
   - Same overs logic: `innings` **required** when overs passed. `commentary_id` alone: single commentary (sync).
   - Commentary text must exist before audio. Optional `language` filter.
 
-**Other:** GET timeline, GET languages, GET `/api/matches/{id}/full` (everything in one call)
+**Other:** GET languages (global list), GET `/api/matches/{id}/full` (everything in one call)
+
+### Frontend Data Flow
+
+- **Match open**: `GET /api/matches/{id}` → match metadata (status, `match_info`, `languages`), then `GET /api/matches/{id}/commentaries?after_seq=0&language=…` → commentary array.
+- **Polling**: match + commentaries fetched in parallel. Match provides status; commentaries provides new events.
+- **Language dropdown**: populated from `match.languages` — enriched by the match API with `{code, name, native_name}` objects. No separate `/api/languages` call needed.
+- **Language switch**: re-fetches commentaries only; match data already cached.
 
 ### Timeline (Commentary-Driven)
 
-- `GET /api/matches/{id}/timeline` returns flat `items` array (balls + structural events) from `match_commentaries`.
-- `end_of_over` events are **excluded** from timeline (filtered in `get_timeline_items`).
+- The frontend **derives timeline data from the commentaries array** — no separate timeline endpoint.
+- `end_of_over` events are **excluded** from the timeline progress bar (filtered client-side in `buildTimeline()`).
 - **Badge styling**: All badges aligned (no pos-above/pos-below staggering). Innings start/end badges are rounded (circular) like other badges.
 
 ### Narrative Moments
@@ -167,6 +175,15 @@ Tracks everything a commentator would know:
 7. **Normalized schema** — key fields promoted from JSON, stats in dedicated tables.
 8. **Gender-neutral terminology** — `batter` not batsman, `deliveries` not balls.
 9. **Everything is an API** — data loading uses the same endpoints as UI/CLI.
+10. **Dual-mode frontend** — works with full backend (API mode) or as static site (GitHub Pages) using pre-exported JSON + audio.
+
+### Static Export (GitHub Pages)
+
+- **Export**: `python scripts/export_static.py [--base-path /ai-commentator]` populates `docs/` with match list, match details, commentaries per language, and audio files.
+- **Base path**: Use `--base-path /ai-commentator` for project pages (user.github.io/ai-commentator). Omit for user/org pages.
+- **GitHub Pages**: In repo settings, set Pages source to `docs/` on `main`. The export creates `docs/.nojekyll`.
+- **Mode detection**: `index.html` in `docs/` injects `window.CRICVOX_STATIC = true`; the frontend uses hash-based routing and fetches from `data/matches*.json` instead of the API.
+- **Workflow**: Generate matches locally → run export script → commit & push.
 
 ## Testing
 

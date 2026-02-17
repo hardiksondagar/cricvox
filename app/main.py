@@ -34,7 +34,7 @@ from app.storage.database import (
     # Commentaries
     get_commentaries_after, get_commentary_by_id,
     get_commentaries_pending_audio, delete_commentaries,
-    insert_commentary, get_timeline_items,
+    insert_commentary,
     # Innings stats
     get_innings_batters, get_innings_bowlers, get_fall_of_wickets,
     # Innings & partnerships
@@ -175,10 +175,11 @@ async def api_list_matches(status: str | None = None):
 
 @app.get("/api/matches/{match_id}")
 async def api_get_match(match_id: int):
-    """Get a single match by ID."""
+    """Get a single match by ID. Languages are enriched with display names."""
     match = await get_match(match_id)
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
+    match["languages"] = _enrich_languages(match.get("languages") or [])
     return match
 
 
@@ -246,7 +247,27 @@ def _match_languages(match: dict) -> list[str]:
     langs = match.get("languages") or ["hi"]
     if isinstance(langs, str):
         langs = [langs]
-    return [l for l in langs if l in SUPPORTED_LANGUAGES] or ["hi"]
+    # Handle both enriched [{code, ...}] and plain ["hi"] formats
+    codes = [l["code"] if isinstance(l, dict) else l for l in langs]
+    return [c for c in codes if c in SUPPORTED_LANGUAGES] or ["hi"]
+
+
+def _enrich_languages(langs: list) -> list[dict]:
+    """Enrich language codes with display names from SUPPORTED_LANGUAGES."""
+    codes = langs if langs else ["hi"]
+    if isinstance(codes, str):
+        codes = [codes]
+    result = []
+    for item in codes:
+        code = item["code"] if isinstance(item, dict) else item
+        cfg = SUPPORTED_LANGUAGES.get(code)
+        if cfg:
+            result.append({
+                "code": code,
+                "name": cfg["name"],
+                "native_name": cfg["native_name"],
+            })
+    return result or [{"code": "hi", "name": "Hindi", "native_name": "हिन्दी"}]
 
 
 async def _insert_delivery_skeleton(
@@ -869,41 +890,8 @@ async def api_delete_match_players(match_id: int):
 
 
 # ================================================================== #
-#  API: Match timeline (frontend compat — grouped by innings)
+#  API: Full match data (everything in one call)
 # ================================================================== #
-
-@app.get("/api/matches/{match_id}/timeline")
-async def api_match_timeline(match_id: int):
-    """
-    Return a flat list of timeline items for the frontend progress bar.
-
-    Each item is either a 'ball' (with delivery snapshot) or an 'event'
-    (structural: first_innings_start, innings_break, end_of_over, etc.).
-
-    Items are ordered by seq. The frontend renders each item as a badge
-    and uses ball_info (when present) for scoreboard snapshots on scrub.
-    """
-    match = await get_match(match_id)
-    if not match:
-        raise HTTPException(status_code=404, detail="Match not found")
-
-    items = await get_timeline_items(match_id)
-    # Strip audio tags for display (DB stores raw text for TTS)
-    for item in items:
-        if item.get("text"):
-            item["text"] = strip_audio_tags(item["text"])
-
-    # Also provide innings metadata for team names
-    match_info = match.get("match_info", {})
-    innings_summary = match_info.get("innings_summary", [])
-
-    return {
-        "match_id": match_id,
-        "status": match["status"],
-        "items": items,
-        "innings_summary": innings_summary,
-    }
-
 
 @app.get("/api/matches/{match_id}/full")
 async def api_get_match_full(match_id: int):
@@ -1001,20 +989,18 @@ async def api_get_commentaries(match_id: int, after_seq: int = 0, language: str 
     """
     Poll for commentaries. Returns events with seq > after_seq.
     Filters by language (returns requested language + language-independent events).
+
+    Use GET /api/matches/{match_id} for match metadata (status, languages, innings_summary).
     """
     match = await get_match(match_id)
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
 
     commentaries = await get_commentaries_after(match_id, after_seq, language=language)
-    # Strip audio tags for display (DB stores raw text for TTS)
     for c in commentaries:
         if c.get("text"):
             c["text"] = strip_audio_tags(c["text"])
-    return {
-        "match": match,
-        "commentaries": commentaries,
-    }
+    return commentaries
 
 
 @app.get("/api/commentaries/{commentary_id}")

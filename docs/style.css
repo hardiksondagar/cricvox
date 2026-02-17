@@ -1,0 +1,779 @@
+/* === Minimal custom styles — only what Tailwind can't do === */
+
+/* Score glow on big moments */
+.score-glow {
+    transition: text-shadow 0.4s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.score-glow.flash {
+    text-shadow: 0 0 40px rgba(16, 185, 129, 0.5);
+}
+
+/* Feed scrollbar */
+.feed-scroll::-webkit-scrollbar { width: 3px; }
+.feed-scroll::-webkit-scrollbar-track { background: transparent; }
+.feed-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+.feed-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+/* Ball dots */
+.ball-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.ball-dot.runs-0 { background: rgba(255,255,255,0.04); color: #525252; }
+.ball-dot.runs-1,
+.ball-dot.runs-2,
+.ball-dot.runs-3 { background: rgba(59,130,246,0.12); color: #60a5fa; }
+.ball-dot.runs-4 { background: rgba(16,185,129,0.15); color: #34d399; }
+.ball-dot.runs-6 { background: rgba(139,92,246,0.15); color: #a78bfa; }
+.ball-dot.wicket { background: rgba(239,68,68,0.15); color: #f87171; }
+.ball-dot.extra  { background: rgba(251,146,60,0.12); color: #fb923c; }
+.ball-dot.ball-placeholder { background: rgba(255,255,255,0.04); color: transparent; border: 1px dashed rgba(255,255,255,0.08); }
+
+/* This Over: fixed width, 6 balls + extras row; height fits 2 rows so no layout shift */
+.this-over-balls {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    width: 210px;
+    min-height: 68px;
+    flex-shrink: 0;
+}
+.this-over-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: nowrap;
+    justify-content: left;
+}
+.this-over-row:not(.this-over-extras) .ball-dot { flex: 1; min-width: 0; aspect-ratio: 1; width: auto; height: auto; }
+.this-over-extras { flex-wrap: wrap; }
+.this-over-extras .ball-dot { flex: 0 0 28px; width: 28px; height: 28px; }
+
+/* Commentary feed items */
+.feed-item {
+    display: flex;
+    gap: 0;
+    border-radius: 10px;
+    transition: background 0.15s ease;
+    animation: feedIn 0.3s ease-out;
+    overflow: hidden;
+}
+
+.feed-item + .feed-item {
+    margin-top: 4px;
+}
+
+@keyframes feedIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.feed-item:hover { background: rgba(255,255,255,0.02); }
+
+.feed-item.feed-placeholder {
+    display: block;
+    background: none;
+    border: none;
+    animation: none;
+}
+.feed-item.feed-placeholder:hover { background: none; }
+
+/* Left column: ball info */
+.feed-ball-col {
+    width: 64px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 14px 0 14px 0;
+    gap: 6px;
+}
+
+.feed-ball-over {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #525252;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: -0.02em;
+}
+
+.feed-ball-indicator {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+}
+
+/* Ball indicator colors */
+.feed-ball-indicator.ball-W  { background: rgba(239,68,68,0.15); color: #f87171; }
+.feed-ball-indicator.ball-0  { background: rgba(255,255,255,0.04); color: #525252; }
+.feed-ball-indicator.ball-1,
+.feed-ball-indicator.ball-2,
+.feed-ball-indicator.ball-3  { background: rgba(59,130,246,0.12); color: #60a5fa; }
+.feed-ball-indicator.ball-4  { background: rgba(16,185,129,0.15); color: #34d399; }
+.feed-ball-indicator.ball-6  { background: rgba(139,92,246,0.15); color: #a78bfa; }
+.feed-ball-indicator.ball-wd,
+.feed-ball-indicator.ball-nb { background: rgba(251,146,60,0.12); color: #fb923c; }
+
+/* Right column: content */
+.feed-content-col {
+    flex: 1;
+    min-width: 0;
+    padding: 14px 16px 14px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.feed-item:first-child .feed-content-col {
+    border-bottom: none;
+}
+
+.feed-item .feed-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.feed-item .feed-over {
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: #525252;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.feed-item .feed-badge {
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.feed-item .feed-text {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #d4d4d4;
+}
+
+.feed-item .feed-score {
+    font-size: 0.75rem;
+    color: #525252;
+    margin-top: 6px;
+    font-weight: 500;
+}
+
+/* Branch badge colors */
+.badge-routine            { background: rgba(255,255,255,0.05); color: #737373; }
+.badge-boundary_momentum  { background: rgba(16,185,129,0.12); color: #34d399; }
+.badge-wicket_drama       { background: rgba(239,68,68,0.12); color: #f87171; }
+.badge-pressure_builder   { background: rgba(245,158,11,0.12); color: #fbbf24; }
+.badge-over_transition    { background: rgba(59,130,246,0.12); color: #60a5fa; }
+.badge-extra_gift         { background: rgba(249,115,22,0.12); color: #fb923c; }
+
+.feed-item.pivot {
+    background: rgba(139,92,246,0.04);
+}
+.feed-item.pivot .feed-ball-indicator {
+    box-shadow: 0 0 0 2px rgba(139,92,246,0.3);
+}
+
+/* Ball pending state — shown before commentary text arrives */
+.feed-item.feed-ball-pending .feed-ball-indicator {
+    opacity: 0.5;
+}
+.feed-text.feed-text-pending {
+    color: #404040;
+    font-size: 0.8rem;
+    font-style: italic;
+}
+
+/* Narrative moments */
+.feed-narrative .feed-text { font-style: italic; color: #e5e5e5; }
+
+/* Narrative left column icon */
+.feed-narrative-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.narrative-icon-first_innings_start,
+.narrative-icon-second_innings_start { background: rgba(59,130,246,0.12); color: #60a5fa; }
+.narrative-icon-first_innings_end    { background: rgba(249,115,22,0.12); color: #fb923c; }
+.narrative-icon-second_innings_end            { background: rgba(234,179,8,0.12); color: #facc15; }
+.narrative-icon-milestone            { background: rgba(234,179,8,0.12); color: #facc15; }
+.narrative-icon-new_batter,
+.narrative-icon-new_batsman          { background: rgba(239,68,68,0.12); color: #f87171; }
+.narrative-icon-end_of_over          { background: rgba(59,130,246,0.12); color: #60a5fa; }
+.narrative-icon-phase_change         { background: rgba(16,185,129,0.12); color: #34d399; }
+.narrative-icon-general              { background: rgba(139,92,246,0.12); color: #a78bfa; }
+
+.badge-narrative {
+    background: rgba(139,92,246,0.12);
+    color: #a78bfa;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* Recent over items */
+.recent-over-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+.recent-over-item:hover { background: rgba(255,255,255,0.04); }
+.recent-over-num  { font-size: 0.75rem; color: #525252; font-weight: 600; }
+.recent-over-runs { font-size: 0.85rem; font-weight: 700; color: #d4d4d4; font-family: 'JetBrains Mono', monospace; }
+
+/* Match end overlay */
+.match-end-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(20px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.match-end-card {
+    background: #171717;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 48px 64px;
+    text-align: center;
+    animation: cardIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes cardIn {
+    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.match-end-card h2 {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #fafafa;
+    margin-bottom: 8px;
+}
+
+.match-end-card p {
+    font-size: 1rem;
+    color: #737373;
+    margin-bottom: 6px;
+}
+
+
+/* Currently playing commentary highlight */
+.feed-item-playing {
+    background: rgba(16, 185, 129, 0.06) !important;
+    animation: none;
+}
+.feed-item-playing .feed-text {
+    color: #e5e5e5;
+}
+
+/* Audio play button in replay mode */
+.audio-play-btn {
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: none;
+    cursor: pointer;
+    font-size: 0.6rem;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+.audio-play-btn:hover {
+    background: rgba(16, 185, 129, 0.3);
+    transform: scale(1.1);
+}
+
+/* Match list items */
+.match-list-item + .match-list-item {
+    margin-top: 0;
+}
+
+@media (max-width: 768px) {
+    .match-end-card { padding: 32px; }
+    .match-end-card h2 { font-size: 1.5rem; }
+}
+
+
+/* ================================================================== */
+/*  TIMELINE PROGRESS BAR — Fixed bottom audio player                 */
+/* ================================================================== */
+
+.timeline-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 56px;
+    padding: 0 16px;
+    background: rgba(10, 10, 10, 0.92);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.timeline-bar.hidden {
+    display: none;
+}
+
+/* Left controls: Language + Play/Pause */
+.timeline-left-controls {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Play / Pause button */
+.timeline-play-btn {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.timeline-play-btn:hover {
+    background: rgba(16, 185, 129, 0.3);
+    transform: scale(1.08);
+}
+
+/* Track area: wraps labels, track, and tooltip */
+.timeline-track-area {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 0;
+}
+
+/* Innings labels row — hidden, separator dot used instead */
+.timeline-innings-labels {
+    display: none;
+}
+
+/* Track container: the actual progress bar */
+.timeline-track-container {
+    position: relative;
+    width: 100%;
+    height: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    overflow: visible;
+}
+
+.timeline-track-bg {
+    position: absolute;
+    inset: 0;
+    /* background: rgba(255, 255, 255, 0.06); */
+    border-radius: 4px;
+}
+
+/* Filled region — commentary available */
+.timeline-filled {
+    position: absolute;
+    top: 0px;
+    left: 0;
+    height: 100%;
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    pointer-events: none;
+}
+
+/* Badge markers: dots on track, highlights below */
+.timeline-badges {
+    position: absolute;
+    top: -4px;
+    left: 0;
+    right: 0;
+    height: 32px;
+    pointer-events: auto;
+    z-index: 10;
+}
+
+.timeline-badge {
+    position: absolute;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.85;
+    pointer-events: auto;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+}
+
+/* Dots on the progress bar — centered on track, clearly clickable */
+.timeline-badge.badge-dot,
+.timeline-badge.badge-wide,
+.timeline-badge.badge-noball {
+    top: 8px;  /* track center: badges top=-4, track 0-8 → center at 8px */
+    width: 4px;
+    height: 4px;
+    background: rgba(255,255,255,0.5);
+    font-size: 0;
+    box-shadow: none;
+    opacity: 0.7;
+    color: #0a0a0a;
+}
+
+/* Highlights below the progress bar — 4, 6, W, event badges */
+.timeline-badge.badge-wicket,
+.timeline-badge.badge-six,
+.timeline-badge.badge-four,
+.timeline-badge.badge-event {
+    top: 12px;
+    width: 12px;
+    height: 12px;
+}
+.timeline-badge.badge-wicket   { background: rgba(239,68,68,0.9); color: #fff; box-shadow: 0 0 6px rgba(248,113,113,0.5); z-index: 10; }
+.timeline-badge.badge-six      { background: rgba(139,92,246,0.9); color: #fff; box-shadow: 0 0 4px rgba(167,139,250,0.3); }
+.timeline-badge.badge-four     { background: rgba(16,185,129,0.9); color: #fff; box-shadow: 0 0 4px rgba(52,211,153,0.3); }
+
+.timeline-badge.hover {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 1;
+    z-index: 9999;
+}
+
+/* Dot badges expand on hover / active — stay on track */
+.timeline-badge.hover.badge-dot,
+.timeline-badge.hover.badge-wide,
+.timeline-badge.hover.badge-noball,
+.timeline-badge.active.badge-dot,
+.timeline-badge.active.badge-wide,
+.timeline-badge.active.badge-noball {
+    width: 12px; height: 12px; font-size: 0.65rem; top: 12px; }
+
+/* Per-type colours — hover */
+.timeline-badge.hover.badge-dot    { background: rgba(255,255,255,0.9); box-shadow: 0 0 6px rgba(255,255,255,0.4); }
+.timeline-badge.hover.badge-wide   { background: rgba(245,158,11,0.9); color: #0a0a0a; box-shadow: 0 0 4px rgba(251,191,36,0.4); }
+.timeline-badge.hover.badge-noball { background: rgba(249,115,22,0.9); color: #fff; box-shadow: 0 0 4px rgba(251,146,60,0.4); }
+
+/* Per-type colours — active */
+.timeline-badge.active.badge-dot    { background: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.4); }
+.timeline-badge.active.badge-wide   { background: rgba(245,158,11,0.9); color: #0a0a0a; box-shadow: 0 0 8px rgba(251,191,36,0.5); }
+.timeline-badge.active.badge-noball { background: rgba(249,115,22,0.9); color: #fff; box-shadow: 0 0 8px rgba(251,146,60,0.5); }
+
+.timeline-badge.hover.active {
+    transform: translate(-50%, -50%) scale(1);
+    width: 12px;
+    height: 12px;
+}
+
+.timeline-badge.active {
+    /* transform: translate(-50%, -50%) scale(1); */
+    opacity: 1;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5), 0 0 0 1px #fff;
+    z-index: 9999;
+}
+
+/* Event badges — same row as 4/6/W, below track */
+.timeline-badge.badge-event {
+    border-radius: 50%;
+    font-size: 0;
+    box-shadow: none;
+}
+.timeline-badge.badge-event.badge-innings-start,
+.timeline-badge.badge-event.badge-innings-end {
+    background: rgba(56, 189, 248, 0.6);
+    opacity: 0.85;
+}
+.timeline-badge.badge-event.hover,
+.timeline-badge.badge-event.active {
+    background: rgba(56, 189, 248, 0.9);
+    opacity: 1;
+}
+
+/* Innings separator — rendered as a dot like wicket/six badges */
+.timeline-innings-sep {
+    position: absolute;
+    top: -4px;
+    left: 0;
+    right: 0;
+    height: 16px;
+    pointer-events: none;
+}
+
+.timeline-innings-sep-dot {
+    position: absolute;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fbbf24;
+    box-shadow: 0 0 5px rgba(251, 191, 36, 0.5);
+    transform: translate(-50%, -50%);
+}
+
+/* Playback cursor / thumb */
+.timeline-cursor {
+    position: absolute;
+    top: -6px;
+    left: 0;
+    width: 3px;
+    height: 20px;
+    margin-left: -1.5px;
+    border-radius: 2px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
+    transition: left 0.2s ease;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.timeline-cursor.hidden {
+    display: none;
+}
+
+/* Hover tooltip — highest z-index so it appears above badges/cursor */
+.timeline-tooltip {
+    position: absolute;
+    bottom: 24px;
+    left: 0;
+    transform: translateX(-50%);
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 8px 12px;
+    pointer-events: none;
+    z-index: 10001;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.timeline-tooltip.hidden {
+    display: none;
+}
+
+.timeline-tooltip-over {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #e5e5e5;
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.timeline-tooltip-players {
+    font-size: 0.65rem;
+    color: #737373;
+    font-weight: 500;
+}
+
+.timeline-tooltip-event {
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.timeline-tooltip-event.event-wicket   { color: #f87171; }
+.timeline-tooltip-event.event-four     { color: #34d399; }
+.timeline-tooltip-event.event-six      { color: #a78bfa; }
+.timeline-tooltip-event.event-runs     { color: #60a5fa; }
+.timeline-tooltip-event.event-dot      { color: #525252; }
+.timeline-tooltip-event.event-unavail  { color: #525252; font-style: italic; }
+
+.tooltip-badge {
+    display: inline-block;
+    font-size: 0.55rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tooltip-badge.tb-wicket { background: rgba(239,68,68,0.15); color: #f87171; }
+.tooltip-badge.tb-four   { background: rgba(16,185,129,0.15); color: #34d399; }
+.tooltip-badge.tb-six    { background: rgba(139,92,246,0.15); color: #a78bfa; }
+
+/* Right controls */
+.timeline-right-controls {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Language selector in timeline — pill shape matching play/pause */
+.timeline-lang-select {
+    height: 36px;
+    padding: 0 10px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    border-radius: 999px;
+    color: #a3a3a3;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.15s ease;
+    -webkit-appearance: none;
+    appearance: none;
+    padding-right: 22px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' fill='none'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%23737373' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+}
+.timeline-lang-select:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+.timeline-lang-select option {
+    background: #171717;
+    color: #d4d4d4;
+}
+
+/* Live badge in timeline */
+.timeline-live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #f87171;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.timeline-live-badge.hidden {
+    display: none;
+}
+
+.timeline-live-dot {
+    width: 6px;
+    height: 6px;
+    background: #f87171;
+    border-radius: 50%;
+    animation: livePulse 1.4s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.4; transform: scale(0.8); }
+}
+
+/* Go Live button */
+.timeline-go-live {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #f87171;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 4px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-transform: uppercase;
+}
+.timeline-go-live:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+}
+.timeline-go-live.hidden {
+    display: none;
+}
+
+/* Dragging state */
+.timeline-track-container:hover .timeline-cursor {
+    width: 4px;
+    margin-left: -2px;
+}
+.timeline-track-container.dragging .timeline-cursor {
+    transition: none;
+    width: 4px;
+    margin-left: -2px;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+}
+
+/* Expand track hit area on hover for easier clicking */
+.timeline-track-container::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    bottom: -8px;
+    left: 0;
+    right: 0;
+}
+
+@media (max-width: 768px) {
+    .timeline-bar {
+        height: 52px;
+        padding: 0 10px;
+        gap: 8px;
+    }
+    .timeline-play-btn {
+        width: 32px;
+        height: 32px;
+    }
+    .timeline-right-controls {
+        gap: 4px;
+    }
+}
