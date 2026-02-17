@@ -102,6 +102,7 @@ async def init_db() -> None:
             language    TEXT,
             text        TEXT,
             audio_url   TEXT,
+            is_generated INTEGER NOT NULL DEFAULT 0,
             data        TEXT NOT NULL DEFAULT '{}',
             created_at  TEXT NOT NULL,
             FOREIGN KEY (match_id) REFERENCES matches(match_id),
@@ -284,6 +285,18 @@ async def init_db() -> None:
                 logger.info(f"Migrated innings_bowlers: added '{col_name}' column")
             except Exception:
                 pass
+
+    # Migrate: add is_generated column to match_commentaries if missing
+    try:
+        await _db.execute("SELECT is_generated FROM match_commentaries LIMIT 1")
+    except Exception:
+        try:
+            await _db.execute(
+                "ALTER TABLE match_commentaries ADD COLUMN is_generated INTEGER NOT NULL DEFAULT 0"
+            )
+            logger.info("Migrated match_commentaries: added 'is_generated' column")
+        except Exception:
+            pass
 
     # Migrate: add new columns on matches if missing
     match_new_cols = [
@@ -1113,19 +1126,52 @@ async def insert_commentary(
     text: str | None,
     audio_url: str | None,
     data: dict,
+    is_generated: bool = False,
 ) -> int:
     """Insert one commentary row. Returns the row ID."""
     db = _get_db()
     now = datetime.now(timezone.utc).isoformat()
     cursor = await db.execute(
         """INSERT INTO match_commentaries
-           (match_id, ball_id, seq, event_type, language, text, audio_url, data, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           (match_id, ball_id, seq, event_type, language, text, audio_url, is_generated, data, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (match_id, ball_id, seq, event_type, language, text, audio_url,
-         json.dumps(data, default=str), now),
+         1 if is_generated else 0, json.dumps(data, default=str), now),
     )
     await db.commit()
     return cursor.lastrowid
+
+
+async def get_commentaries_by_ball_id(match_id: int, ball_id: int) -> list[dict]:
+    """
+    Fetch all commentary rows for a given ball_id, ordered by seq.
+    Used by generation to find skeletons (is_generated=0) and update them with LLM text.
+    """
+    db = _get_db()
+    query = """
+        SELECT id, match_id, ball_id, seq, event_type, language,
+               text, audio_url, is_generated, data
+        FROM match_commentaries
+        WHERE match_id = ? AND ball_id = ?
+        ORDER BY seq ASC, id ASC
+    """
+    async with db.execute(query, (match_id, ball_id)) as cur:
+        rows = await cur.fetchall()
+    result = []
+    for r in rows:
+        result.append({
+            "id": r["id"],
+            "match_id": r["match_id"],
+            "ball_id": r["ball_id"],
+            "seq": r["seq"],
+            "event_type": r["event_type"],
+            "language": r["language"],
+            "text": r["text"],
+            "audio_url": r["audio_url"],
+            "is_generated": bool(r["is_generated"]) if r["is_generated"] is not None else False,
+            "data": json.loads(r["data"]) if r["data"] else {},
+        })
+    return result
 
 
 async def get_commentaries_after(
@@ -1343,6 +1389,100 @@ async def update_commentary_audio(commentary_id: int, audio_url: str) -> None:
     await db.commit()
 
 
+async def get_skeleton_to_update(
+    match_id: int,
+    ball_id: int | None,
+    event_type: str,
+    language: str,
+    include_generated: bool = False,
+) -> int | None:
+    """
+    Find a commentary row that can be updated for this language.
+    By default only considers is_generated=0; set include_generated=True to also update existing rows.
+    Prefers exact language match; otherwise uses language=NULL (skeleton).
+    Returns row id or None.
+    """
+    db = _get_db()
+    gen_filter = "" if include_generated else " AND is_generated = 0"
+    if ball_id is not None:
+        query = f"""
+            SELECT id FROM match_commentaries
+            WHERE match_id = ? AND ball_id = ? AND event_type = ?{gen_filter}
+              AND (language = ? OR language IS NULL)
+            ORDER BY CASE WHEN language = ? THEN 0 ELSE 1 END
+            LIMIT 1
+        """
+        params = (match_id, ball_id, event_type, language, language)
+    else:
+        query = f"""
+            SELECT id FROM match_commentaries
+            WHERE match_id = ? AND ball_id IS NULL AND event_type = ?{gen_filter}
+              AND (language = ? OR language IS NULL)
+            ORDER BY CASE WHEN language = ? THEN 0 ELSE 1 END
+            LIMIT 1
+        """
+        params = (match_id, event_type, language, language)
+    async with db.execute(query, params) as cur:
+        row = await cur.fetchone()
+        return row["id"] if row else None
+
+
+async def update_commentary_text(
+    commentary_id: int,
+    text: str,
+    data: dict,
+    language: str,
+    clear_audio: bool = False,
+) -> None:
+    """Update a commentary row with LLM-generated text, set is_generated=1.
+    If clear_audio=True, also set audio_url=NULL (e.g. when force_regenerate)."""
+    db = _get_db()
+    if clear_audio:
+        await db.execute(
+            """UPDATE match_commentaries SET text = ?, language = ?, is_generated = 1,
+               data = ?, audio_url = NULL WHERE id = ?""",
+            (text, language, json.dumps(data, default=str), commentary_id),
+        )
+    else:
+        await db.execute(
+            """UPDATE match_commentaries SET text = ?, language = ?, is_generated = 1, data = ?
+               WHERE id = ?""",
+            (text, language, json.dumps(data, default=str), commentary_id),
+        )
+    await db.commit()
+
+
+async def mark_skeleton_generated(match_id: int, ball_id: int) -> None:
+    """Mark the delivery skeleton row as generated after LLM produces commentary."""
+    db = _get_db()
+    await db.execute(
+        "UPDATE match_commentaries SET is_generated = 1 "
+        "WHERE match_id = ? AND ball_id = ? AND event_type = 'delivery'",
+        (match_id, ball_id),
+    )
+    await db.commit()
+
+
+async def mark_event_skeleton_generated(
+    match_id: int, event_type: str, ball_id: int | None = None,
+) -> None:
+    """Mark a structural event skeleton row as generated (by event_type; ball_id optional)."""
+    db = _get_db()
+    if ball_id is not None:
+        await db.execute(
+            "UPDATE match_commentaries SET is_generated = 1 "
+            "WHERE match_id = ? AND ball_id = ? AND event_type = ?",
+            (match_id, ball_id, event_type),
+        )
+    else:
+        await db.execute(
+            "UPDATE match_commentaries SET is_generated = 1 "
+            "WHERE match_id = ? AND event_type = ?",
+            (match_id, event_type),
+        )
+    await db.commit()
+
+
 async def get_recent_commentary_texts(
     match_id: int,
     language: str,
@@ -1356,7 +1496,7 @@ async def get_recent_commentary_texts(
     query = """
         SELECT text FROM match_commentaries
         WHERE match_id = ? AND language = ?
-          AND event_type = 'commentary' AND text IS NOT NULL AND text != ''
+          AND event_type = 'delivery' AND text IS NOT NULL AND text != ''
         ORDER BY seq DESC, id DESC
         LIMIT ?
     """
@@ -1427,6 +1567,104 @@ async def get_max_seq(match_id: int) -> int:
         return row["max_seq"] if row else 0
 
 
+async def get_timeline_items(match_id: int) -> list[dict]:
+    """
+    Return one row per timeline position for a match.
+
+    Includes:
+      - event_type='delivery' rows (skeleton or LLM-generated) with delivery snapshot
+      - structural events (first_innings_start, end_of_over, etc.) — all tied to ball_id
+
+    Ordered by ball_id (then seq) for stable ordering when items are deleted and re-added.
+    """
+    db = _get_db()
+    query = """
+        SELECT
+            c.id, c.match_id, c.ball_id, c.seq, c.event_type,
+            c.language, c.text, c.audio_url, c.is_generated, c.data, c.created_at,
+            d.innings     AS b_innings,
+            d.over        AS b_over,
+            d.ball        AS b_ball,
+            d.ball_index  AS b_ball_index,
+            d.batter      AS b_batter,
+            d.bowler      AS b_bowler,
+            d.non_batter  AS b_non_batter,
+            d.runs        AS b_runs,
+            d.extras      AS b_extras,
+            d.extras_type AS b_extras_type,
+            d.is_wicket   AS b_is_wicket,
+            d.is_boundary AS b_is_boundary,
+            d.is_six      AS b_is_six,
+            d.total_runs  AS b_total_runs,
+            d.total_wickets AS b_total_wickets,
+            d.overs_completed AS b_overs_completed,
+            d.balls_in_over AS b_balls_in_over,
+            d.crr         AS b_crr,
+            d.rrr         AS b_rrr,
+            d.runs_needed AS b_runs_needed,
+            d.balls_remaining AS b_balls_remaining,
+            d.match_phase AS b_match_phase,
+            d.data        AS ball_data
+        FROM match_commentaries c
+        LEFT JOIN deliveries d ON c.ball_id = d.id
+        WHERE c.match_id = ? AND c.event_type != 'end_of_over'
+          AND c.id IN (
+              SELECT MIN(id) FROM match_commentaries m2
+              WHERE m2.match_id = ?
+              GROUP BY m2.seq, COALESCE(m2.ball_id, -1), m2.event_type
+          )
+        ORDER BY COALESCE(c.ball_id, 0) ASC, c.seq ASC
+    """
+    async with db.execute(query, (match_id, match_id)) as cur:
+        rows = await cur.fetchall()
+
+    items = []
+    for row in rows:
+        item = {
+            "id": row["id"],
+            "seq": row["seq"],
+            "type": "ball" if row["event_type"] == "delivery" else "event",
+            "event_type": row["event_type"],
+            "ball_id": row["ball_id"],
+            "is_generated": bool(row["is_generated"]),
+            "text": row["text"],
+            "data": json.loads(row["data"]) if row["data"] else {},
+        }
+        # Attach delivery snapshot for ball items
+        if row["b_over"] is not None:
+            ball_runs = (row["b_runs"] or 0) + (row["b_extras"] or 0)
+            overs_display = f"{row['b_overs_completed']}.{row['b_balls_in_over']}"
+            item["ball_info"] = {
+                "innings": row["b_innings"],
+                "over": row["b_over"],
+                "ball": row["b_ball"],
+                "ball_index": row["b_ball_index"],
+                "batter": row["b_batter"],
+                "bowler": row["b_bowler"],
+                "non_batter": row["b_non_batter"],
+                "runs": row["b_runs"],
+                "extras": row["b_extras"],
+                "extras_type": row["b_extras_type"],
+                "is_wicket": bool(row["b_is_wicket"]),
+                "is_boundary": bool(row["b_is_boundary"]),
+                "is_six": bool(row["b_is_six"]),
+                "ball_runs": ball_runs,
+                "total_runs": row["b_total_runs"],
+                "total_wickets": row["b_total_wickets"],
+                "overs": overs_display,
+                "crr": row["b_crr"],
+                "rrr": row["b_rrr"],
+                "runs_needed": row["b_runs_needed"],
+                "balls_remaining": row["b_balls_remaining"],
+                "match_phase": row["b_match_phase"],
+            }
+        else:
+            item["ball_info"] = None
+        items.append(item)
+
+    return items
+
+
 def _row_to_commentary(row: aiosqlite.Row) -> dict:
     result = {
         "id": row["id"],
@@ -1437,6 +1675,7 @@ def _row_to_commentary(row: aiosqlite.Row) -> dict:
         "language": row["language"],
         "text": row["text"],
         "audio_url": row["audio_url"],
+        "is_generated": bool(row["is_generated"]) if row["is_generated"] is not None else False,
         "data": json.loads(row["data"]),
         "created_at": row["created_at"],
     }

@@ -221,12 +221,12 @@
     flex-shrink: 0;
 }
 
-.narrative-icon-match_start,
 .narrative-icon-first_innings_start,
 .narrative-icon-second_innings_start { background: rgba(59,130,246,0.12); color: #60a5fa; }
 .narrative-icon-first_innings_end    { background: rgba(249,115,22,0.12); color: #fb923c; }
-.narrative-icon-match_result         { background: rgba(234,179,8,0.12); color: #facc15; }
+.narrative-icon-second_innings_end            { background: rgba(234,179,8,0.12); color: #facc15; }
 .narrative-icon-milestone            { background: rgba(234,179,8,0.12); color: #facc15; }
+.narrative-icon-new_batter,
 .narrative-icon-new_batsman          { background: rgba(239,68,68,0.12); color: #f87171; }
 .narrative-icon-end_of_over          { background: rgba(59,130,246,0.12); color: #60a5fa; }
 .narrative-icon-phase_change         { background: rgba(16,185,129,0.12); color: #34d399; }
@@ -420,37 +420,35 @@
 .timeline-track-bg {
     position: absolute;
     inset: 0;
-    background: rgba(255, 255, 255, 0.06);
+    /* background: rgba(255, 255, 255, 0.06); */
     border-radius: 4px;
 }
 
 /* Filled region — commentary available */
 .timeline-filled {
     position: absolute;
-    top: 0;
+    top: 0px;
     left: 0;
     height: 100%;
-    background: rgba(16, 185, 129, 0.25);
-    border-radius: 4px;
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 2px;
     transition: width 0.3s ease;
     pointer-events: none;
 }
 
-/* Badge markers container */
+/* Badge markers: dots on track, highlights below */
 .timeline-badges {
     position: absolute;
     top: -4px;
     left: 0;
     right: 0;
-    height: 16px;
-    pointer-events: none;
+    height: 32px;
+    pointer-events: auto;
+    z-index: 10;
 }
 
 .timeline-badge {
     position: absolute;
-    top: 50%;
-    width: 14px;
-    height: 14px;
     border-radius: 50%;
     transform: translate(-50%, -50%);
     opacity: 0.85;
@@ -465,27 +463,47 @@
     line-height: 1;
 }
 
+/* Dots on the progress bar — centered on track, clearly clickable */
+.timeline-badge.badge-dot,
+.timeline-badge.badge-wide,
+.timeline-badge.badge-noball {
+    top: 8px;  /* track center: badges top=-4, track 0-8 → center at 8px */
+    width: 4px;
+    height: 4px;
+    background: rgba(255,255,255,0.5);
+    font-size: 0;
+    box-shadow: none;
+    opacity: 0.7;
+    color: #0a0a0a;
+}
 
+/* Highlights below the progress bar — 4, 6, W, event badges */
+.timeline-badge.badge-wicket,
+.timeline-badge.badge-six,
+.timeline-badge.badge-four,
+.timeline-badge.badge-event {
+    top: 12px;
+    width: 12px;
+    height: 12px;
+}
 .timeline-badge.badge-wicket   { background: rgba(239,68,68,0.9); color: #fff; box-shadow: 0 0 6px rgba(248,113,113,0.5); z-index: 10; }
 .timeline-badge.badge-six      { background: rgba(139,92,246,0.9); color: #fff; box-shadow: 0 0 4px rgba(167,139,250,0.3); }
 .timeline-badge.badge-four     { background: rgba(16,185,129,0.9); color: #fff; box-shadow: 0 0 4px rgba(52,211,153,0.3); }
-.timeline-badge.badge-dot,
-.timeline-badge.badge-wide,
-.timeline-badge.badge-noball   { width: 2px; height: 2px; background: rgba(255,255,255,0.35); font-size: 0; box-shadow: none; opacity: 0.6; color: #0a0a0a; }
 
 .timeline-badge.hover {
-    transform: translate(-50%, -50%) scale(2);
+    transform: translate(-50%, -50%) scale(1.5);
     opacity: 1;
-    z-index: 999;
+    z-index: 9999;
 }
 
-/* Shared expand for dot-like badges on hover / active */
+/* Dot badges expand on hover / active — stay on track */
 .timeline-badge.hover.badge-dot,
 .timeline-badge.hover.badge-wide,
 .timeline-badge.hover.badge-noball,
 .timeline-badge.active.badge-dot,
 .timeline-badge.active.badge-wide,
-.timeline-badge.active.badge-noball { width: 10px; height: 10px; font-size: 0.7rem; }
+.timeline-badge.active.badge-noball {
+    width: 12px; height: 12px; font-size: 0.65rem; top: 12px; }
 
 /* Per-type colours — hover */
 .timeline-badge.hover.badge-dot    { background: rgba(255,255,255,0.9); box-shadow: 0 0 6px rgba(255,255,255,0.4); }
@@ -498,14 +516,33 @@
 .timeline-badge.active.badge-noball { background: rgba(249,115,22,0.9); color: #fff; box-shadow: 0 0 8px rgba(251,146,60,0.5); }
 
 .timeline-badge.hover.active {
-    transform: translate(-50%, -50%) scale(2);
+    transform: translate(-50%, -50%) scale(1);
+    width: 12px;
+    height: 12px;
 }
 
 .timeline-badge.active {
-    transform: translate(-50%, -50%) scale(1.25);
+    /* transform: translate(-50%, -50%) scale(1); */
     opacity: 1;
     box-shadow: 0 0 8px rgba(255, 255, 255, 0.5), 0 0 0 1px #fff;
-    z-index: 999;
+    z-index: 9999;
+}
+
+/* Event badges — same row as 4/6/W, below track */
+.timeline-badge.badge-event {
+    border-radius: 50%;
+    font-size: 0;
+    box-shadow: none;
+}
+.timeline-badge.badge-event.badge-innings-start,
+.timeline-badge.badge-event.badge-innings-end {
+    background: rgba(56, 189, 248, 0.6);
+    opacity: 0.85;
+}
+.timeline-badge.badge-event.hover,
+.timeline-badge.badge-event.active {
+    background: rgba(56, 189, 248, 0.9);
+    opacity: 1;
 }
 
 /* Innings separator — rendered as a dot like wicket/six badges */
@@ -532,16 +569,15 @@
 /* Playback cursor / thumb */
 .timeline-cursor {
     position: absolute;
-    top: 50%;
+    top: -6px;
     left: 0;
-    width: 14px;
-    height: 14px;
-    margin-top: -7px;
-    margin-left: -7px;
-    border-radius: 50%;
+    width: 3px;
+    height: 20px;
+    margin-left: -1.5px;
+    border-radius: 2px;
     background: #fff;
-    border: 2px solid #0a0a0a;
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
     transition: left 0.2s ease;
     pointer-events: none;
     z-index: 5;
@@ -551,7 +587,7 @@
     display: none;
 }
 
-/* Hover tooltip */
+/* Hover tooltip — highest z-index so it appears above badges/cursor */
 .timeline-tooltip {
     position: absolute;
     bottom: 24px;
@@ -562,7 +598,7 @@
     border-radius: 8px;
     padding: 8px 12px;
     pointer-events: none;
-    z-index: 10;
+    z-index: 10001;
     white-space: nowrap;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
@@ -707,11 +743,14 @@
 
 /* Dragging state */
 .timeline-track-container:hover .timeline-cursor {
-    transform: scale(1.15);
+    width: 4px;
+    margin-left: -2px;
 }
 .timeline-track-container.dragging .timeline-cursor {
     transition: none;
-    transform: scale(1.3);
+    width: 4px;
+    margin-left: -2px;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
 }
 
 /* Expand track hit area on hover for easier clicking */

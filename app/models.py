@@ -45,7 +45,7 @@ class NarrativeMoment(str, Enum):
     FIRST_INNINGS_START = "first_innings_start"
     FIRST_INNINGS_END = "first_innings_end"
     SECOND_INNINGS_START = "second_innings_start"
-    MATCH_RESULT = "match_result"
+    SECOND_INNINGS_END = "second_innings_end"
 
     # In-play moments
     END_OF_OVER = "end_of_over"

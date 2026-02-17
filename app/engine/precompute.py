@@ -417,7 +417,7 @@ def _detect_narratives(
             )
 
         narratives.append({
-            "type": "match_result",
+            "type": "second_innings_end",
             "branch": NarrativeBranch.WICKET_DRAMA.value,
             "kwargs": {
                 "result_text": result_text,

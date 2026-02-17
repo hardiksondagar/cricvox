@@ -9,6 +9,14 @@ alwaysApply: true
 
 Real-time AI cricket commentary engine that replays T20 match ball-by-ball with LLM-generated commentary and TTS audio. Built with Python 3.11+, FastAPI, OpenAI GPT-4.1, and multi-vendor TTS (ElevenLabs, Sarvam, OpenAI).
 
+## Development Setup
+
+- **Python virtualenv**: Use `./env` for the project venv. Always activate or run via `./env/bin/python` / `./env/bin/pytest`.
+- Create: `python3 -m venv env`
+- Activate: `source ./env/bin/activate` (or on Windows: `.\env\Scripts\activate`)
+- Run tests: `./env/bin/pytest tests/ -v`
+- Run app: `./env/bin/uvicorn app.main:app --reload`
+
 ## Tech Stack
 
 - **Backend**: FastAPI + Uvicorn (async)
@@ -71,7 +79,7 @@ static/
 
 - **matches**: match_id, title, status, match_info (JSON), languages (JSON), venue, format, team1, team2, match_date, created_at
 - **deliveries**: id, match_id, innings, ball_index, over, ball, batter, bowler, non_batter, batter_id, non_batter_id, bowler_id, runs, extras, extras_type, is_wicket, is_boundary, is_six, total_runs, total_wickets, overs_completed, balls_in_over, crr, rrr, runs_needed, balls_remaining, match_phase, data (JSON), context (JSON)
-- **match_commentaries**: id, match_id, ball_id (FK), seq, event_type, language, text, audio_url, data (JSON), created_at
+- **match_commentaries**: id, match_id, ball_id (FK), seq, event_type, language, text, audio_url, is_generated, data (JSON), created_at
 - **innings_batters**: match_id, innings, name, position, runs, balls_faced, fours, sixes, dots, is_out, strike_rate, out_status, dismissal_info
 - **innings_bowlers**: match_id, innings, name, balls_bowled, runs_conceded, wickets, maidens, dots, economy, overs_bowled
 - **fall_of_wickets**: match_id, innings, wicket_number, batter, batter_runs, team_score, overs, bowler, how
@@ -122,25 +130,31 @@ Tracks everything a commentator would know:
 - `POST /api/matches/{id}/generate_commentaries` — overs, innings, delivery_id, generate_audio
   - No params: all deliveries (background). `overs`+`innings`: specific overs (background). `innings` **required** when overs passed.
   - `delivery_id` alone: single delivery (sync). `generate_audio=true`: chain audio after text.
-  - Idempotent: deletes existing commentaries for target balls before adding new.
+  - Idempotent: updates existing skeletons (is_generated=0) in place; inserts only when no skeleton exists.
 - `POST /api/matches/{id}/generate_commentaries_audio` — overs, innings, commentary_id, language
   - Same overs logic: `innings` **required** when overs passed. `commentary_id` alone: single commentary (sync).
   - Commentary text must exist before audio. Optional `language` filter.
 
 **Other:** GET timeline, GET languages, GET `/api/matches/{id}/full` (everything in one call)
 
+### Timeline (Commentary-Driven)
+
+- `GET /api/matches/{id}/timeline` returns flat `items` array (balls + structural events) from `match_commentaries`.
+- `end_of_over` events are **excluded** from timeline (filtered in `get_timeline_items`).
+- **Badge styling**: All badges aligned (no pos-above/pos-below staggering). Innings start/end badges are rounded (circular) like other badges.
+
 ### Narrative Moments
 
 | Moment | When |
 |--------|------|
-| `first_innings_start` | Before any ball (start_over=1 only) |
+| `first_innings_start` | Before first ball — full match info + first innings context |
 | `first_innings_end` | After 1st innings |
 | `second_innings_start` | Before chase begins |
 | `end_of_over` | After every completed over |
 | `new_batter` | After every wicket |
 | `phase_change` | PP→Middle, Middle→Death |
 | `milestone` | Batter reaches 50/100 |
-| `match_result` | Match ends |
+| `second_innings_end` | Match ends — result first, then summary with key points |
 
 ## Key Design Decisions
 
@@ -157,7 +171,7 @@ Tracks everything a commentator would know:
 ## Testing
 
 ```bash
-python -m pytest tests/ -v         # 38 tests, ~0.7s
+./env/bin/pytest tests/ -v         # 38 tests, ~0.7s (use ./env venv)
 ```
 
 - `test_database.py` — 14 CRUD unit tests (all tables)

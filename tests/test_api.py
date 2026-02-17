@@ -262,12 +262,19 @@ async def test_timeline(client):
     r = await client.get(f"/api/matches/{match_id}/timeline")
     assert r.status_code == 200
     data = r.json()
-    assert "innings" in data
-    assert len(data["innings"]) == 2
-    for inn in data["innings"]:
-        assert "innings_number" in inn
-        assert "deliveries" in inn
-        assert "batting_team" in inn
+    assert "items" in data
+    assert "innings_summary" in data
+    # Should have items: structural events + balls
+    items = data["items"]
+    assert len(items) > 0
+    # Check that ball items have ball_info
+    ball_items = [i for i in items if i["type"] == "ball"]
+    assert len(ball_items) >= 7  # 6 from inn1 + 1 from inn2
+    for bi in ball_items:
+        assert bi["ball_info"] is not None
+    # Check structural events exist
+    event_items = [i for i in items if i["type"] == "event"]
+    assert len(event_items) > 0
 
 
 @pytest.mark.asyncio
@@ -302,8 +309,8 @@ async def test_commentary_crud(client):
     await insert_commentary(
         match_id=match_id,
         ball_id=ball_id,
-        seq=1,
-        event_type="commentary",
+        seq=2,
+        event_type="delivery",
         language="hi",
         text="That's a boundary!",
         audio_url=None,
@@ -315,8 +322,10 @@ async def test_commentary_crud(client):
     data = r.json()
     assert "commentaries" in data
     assert len(data["commentaries"]) >= 1
-    c = data["commentaries"][0]
-    assert c["text"] == "That's a boundary!"
+    # Find the delivery commentary we inserted (skeletons also have text now)
+    commentary_with_text = [c for c in data["commentaries"] if c.get("text") == "That's a boundary!"]
+    assert len(commentary_with_text) >= 1
+    c = commentary_with_text[0]
     commentary_id = c["id"]
 
     r = await client.get(f"/api/commentaries/{commentary_id}")
@@ -390,7 +399,7 @@ async def test_full_match(client):
         match_id=match_id,
         ball_id=ball_id,
         seq=1,
-        event_type="commentary",
+        event_type="delivery",
         language="hi",
         text="First ball commentary",
         audio_url=None,

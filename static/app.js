@@ -21,13 +21,18 @@ let recentOversData = [];
 
 // Timeline state
 let timelineData = null;            // Raw timeline API response
-let timelineBalls = [];             // Flat array: all balls across both innings (ordered)
-let ballIdToTimelineIdx = {};       // ball_id -> index in timelineBalls
+let timelineItems = [];             // Flat array: all timeline items (balls + events) ordered by seq
+let ballIdToTimelineIdx = {};       // ball_id -> index in timelineItems
+let seqToTimelineIdx = {};          // seq -> index in timelineItems
 let ballIdToCommentaryIndices = {}; // ball_id -> [indices in allCommentaries]
 let commentaryIdxToTimelineIdx = {};// playbackIndex -> timeline position
+let timelineIdxToCommentaryId = {}; // timeline idx -> commentary id (selected lang)
+let commentaryIdToIdx = {};         // commentary id -> index in allCommentaries
 let isLiveMode = false;             // Following live edge
 let matchStatus = 'ready';          // 'ready' | 'generating' | 'generated'
 let isDragging = false;             // Dragging the timeline cursor
+let lastScrubCommentaryIdx = null; // Set during scrub; used to play audio on mouseup/touchend only
+let lastScrubHadCommentary = false;
 
 // === DOM refs ===
 const liveBadge = document.getElementById('liveBadge');
@@ -249,6 +254,8 @@ async function openMatch(matchId) {
         }
 
         processCommentaries(data.commentaries);
+        buildTimelineMaps();
+        if (timelineItems.length > 0) renderTimeline();
 
         if (match.status === 'generating') {
             liveBadge.classList.remove('hidden');
@@ -288,7 +295,7 @@ async function openMatch(matchId) {
         }
 
         // Show timeline if we have data
-        if (timelineBalls.length > 0 && match.status !== 'ready') {
+        if (timelineItems.length > 0 && match.status !== 'ready') {
             showTimeline();
         }
     } catch (e) {
@@ -304,6 +311,8 @@ function startPolling(matchId) {
         try {
             const data = await fetch(`/api/matches/${matchId}/commentaries?after_seq=${lastSeq}&language=${selectedLang}`).then(r => r.json());
             processCommentaries(data.commentaries);
+            buildTimelineMaps();
+            if (timelineItems.length > 0) renderTimeline();
 
             // If playing and waiting for more, continue playback
             if (isPlaying && !currentAudio && data.commentaries.length > 0) {
@@ -337,12 +346,13 @@ function processCommentaries(commentaries) {
         allCommentaries.push(c);
         if (c.seq > lastSeq) lastSeq = c.seq;
 
-        if (c.event_type === 'match_start') {
-            const d = c.data;
+        if (c.event_type === 'first_innings_start') {
+            const d = c.data || {};
             if (d.batting_team) els.battingTeam.textContent = d.batting_team;
             if (d.bowling_team) els.bowlingTeam.textContent = d.bowling_team;
             if (d.target) els.target.textContent = d.target;
-        } else if (c.event_type === 'commentary') {
+            addCommentary(c, allCommentaries.length - 1);
+        } else if (c.event_type === 'delivery') {
             const d = c.data || {};
             const bi = c.ball_info;
             if (d.is_narrative) {
@@ -360,13 +370,18 @@ function processCommentaries(commentaries) {
                 // Fallback for commentary without ball_info
                 addCommentary(c, allCommentaries.length - 1);
             }
-        } else if (c.event_type === 'match_end') {
-            // Show match end
+        } else if (c.event_type === 'second_innings_end') {
+            addCommentary(c, allCommentaries.length - 1);
+        } else if ([
+            'first_innings_end', 'second_innings_start',
+            'end_of_over', 'phase_change', 'milestone', 'new_batter'
+        ].includes(c.event_type)) {
+            addCommentary(c, allCommentaries.length - 1);
         }
     }
 
     // Rebuild timeline maps if timeline is loaded
-    if (timelineBalls.length > 0 && commentaries.length > 0) {
+    if (timelineItems.length > 0 && commentaries.length > 0) {
         buildTimelineMaps();
     }
 }
@@ -381,6 +396,8 @@ function switchLanguage(lang) {
     stopAudio();
     ballIdToCommentaryIndices = {};
     commentaryIdxToTimelineIdx = {};
+    timelineIdxToCommentaryId = {};
+    commentaryIdToIdx = {};
     if (currentMatchId) openMatch(currentMatchId);
 }
 
@@ -445,11 +462,8 @@ function pausePlayback() {
 
 function playFrom(idx) {
     clearPlaybackTimer();
-    // Stop current audio without preserving
-    if (currentAudio) {
-        currentAudio.pause();
-        currentAudio = null;
-    }
+    // Stop all previous audio before playing new
+    stopAllAudioPlayback();
     playbackIndex = idx;
     isPlaying = true;
     playBtn.textContent = 'Pause';
@@ -463,7 +477,7 @@ function playCurrentCommentary() {
     // Advance to next commentary with audio
     while (playbackIndex < allCommentaries.length) {
         const c = allCommentaries[playbackIndex];
-        if (c.audio_url && c.event_type === 'commentary') break;
+        if (c.audio_url) break;
         playbackIndex++;
     }
 
@@ -490,9 +504,9 @@ function playCurrentCommentary() {
     // Sync scoreboard to this commentary's ball (updates when each commentary plays)
     if (c.ball_id != null && ballIdToTimelineIdx[c.ball_id] !== undefined) {
         const tlIdx = ballIdToTimelineIdx[c.ball_id];
-        const ball = timelineBalls[tlIdx];
-        if (ball) {
-            applyScoreboardSnapshot(ball);
+        const item = timelineItems[tlIdx];
+        if (item && item.ball_info) {
+            applyScoreboardSnapshot(item.ball_info);
             rebuildCumulativeStatsForTimelineIdx(tlIdx);
         }
     }
@@ -683,8 +697,10 @@ function rebuildCumulativeStatsForTimelineIdx(idx) {
     recentOversData = [];
     ballIndicator.innerHTML = '';
 
-    for (let i = 0; i <= idx && i < timelineBalls.length; i++) {
-        const b = timelineBalls[i];
+    for (let i = 0; i <= idx && i < timelineItems.length; i++) {
+        const item = timelineItems[i];
+        if (item.type !== 'ball' || !item.ball_info) continue; // Skip event items
+        const b = item.ball_info;
         const ballRuns = (b.runs || 0) + (b.extras || 0);
         const oversStr = b.overs || `${b.over}.${b.ball}`;
         const parts = oversStr.split('.');
@@ -812,10 +828,10 @@ function getBallIndicatorLabel(ballInfo, data) {
 
 function getNarrativeIcon(type) {
     const icons = {
-        first_innings_start: '🏏',
+        first_innings_start: '🏟️',
         first_innings_end: '📊',
         second_innings_start: '🎯',
-        match_result: '🏆',
+        second_innings_end: '🏁',
         end_of_over: '↻',
         new_batter: '🏃',
         phase_change: '⚡',
@@ -863,9 +879,6 @@ function addBallFeedItem(c, bi) {
     if (textEl) textEl.textContent = c.text || '';
 
     commentaryFeed.insertBefore(item, commentaryFeed.firstChild);
-    while (commentaryFeed.children.length > 100) {
-        commentaryFeed.removeChild(commentaryFeed.lastChild);
-    }
 }
 
 /**
@@ -878,15 +891,14 @@ function addCommentary(c, idx) {
     const d = c.data || {};
     const item = document.createElement('div');
     item.setAttribute('data-idx', idx);
-    const ballInfo = c.ball_info;
 
-    const narrType = d.narrative_type || 'general';
+    const narrType = d.narrative_type || c.event_type || 'general';
     item.className = `feed-item feed-narrative`;
     const labels = {
-        first_innings_start: 'Match Start',
+        first_innings_start: 'First Innings',
         first_innings_end: 'Innings Break',
         second_innings_start: 'Chase Begins',
-        match_result: 'Result',
+        second_innings_end: 'Second Innings End',
         end_of_over: 'Over Summary',
         new_batter: 'New Batter',
         phase_change: 'Phase Change',
@@ -907,9 +919,6 @@ function addCommentary(c, idx) {
     `;
 
     commentaryFeed.insertBefore(item, commentaryFeed.firstChild);
-    while (commentaryFeed.children.length > 100) {
-        commentaryFeed.removeChild(commentaryFeed.lastChild);
-    }
 }
 
 function clearCommentary() {
@@ -933,14 +942,22 @@ function clearCommentary() {
 
 
 // === Audio ===
+/** Stops all audio playback without changing playback state. Call before starting new audio. */
+function stopAllAudioPlayback() {
+    if (currentAudio) {
+        try {
+            currentAudio.pause();
+            currentAudio.currentTime = 0;
+        } catch (_) {}
+        currentAudio = null;
+    }
+}
+
 function stopAudio() {
     isPlaying = false;
     clearPlaybackTimer();
     playbackIndex = -1;
-    if (currentAudio) {
-        currentAudio.pause();
-        currentAudio = null;
-    }
+    stopAllAudioPlayback();
     highlightPlayingItem(-1);
     playBtn.textContent = 'Play';
     updateTimelinePlayBtn();
@@ -955,23 +972,31 @@ async function fetchTimeline(matchId) {
         const resp = await fetch(`/api/matches/${matchId}/timeline`);
         timelineData = await resp.json();
 
-        // Flatten balls across innings in order
-        timelineBalls = [];
+        // Build flat items array from API response
+        timelineItems = [];
         ballIdToTimelineIdx = {};
-        for (const inn of (timelineData.innings || [])) {
-            for (const b of (inn.deliveries || inn.balls || [])) {
-                ballIdToTimelineIdx[b.ball_id] = timelineBalls.length;
-                timelineBalls.push({
-                    ...b,
-                    innings: inn.innings_number,
-                    batting_team: inn.batting_team,
-                    bowling_team: inn.bowling_team,
-                });
+        seqToTimelineIdx = {};
+
+        // Enrich items with innings team metadata from innings_summary
+        const inningsSummary = timelineData.innings_summary || [];
+
+        for (const item of (timelineData.items || [])) {
+            const idx = timelineItems.length;
+            seqToTimelineIdx[item.seq] = idx;
+            if (item.ball_id != null) {
+                ballIdToTimelineIdx[item.ball_id] = idx;
             }
+            // Attach team names for ball items
+            if (item.ball_info) {
+                const innNum = item.ball_info.innings;
+                const innMeta = inningsSummary.find(s => s.innings_number === innNum) || {};
+                item.ball_info.batting_team = innMeta.batting_team || '';
+                item.ball_info.bowling_team = innMeta.bowling_team || '';
+            }
+            timelineItems.push(item);
         }
 
-        renderTimeline();
-        buildTimelineMaps();
+        // Maps and render happen after processCommentaries (needs allCommentaries)
     } catch (e) {
         console.error('Failed to fetch timeline:', e);
     }
@@ -980,13 +1005,38 @@ async function fetchTimeline(matchId) {
 function buildTimelineMaps() {
     ballIdToCommentaryIndices = {};
     commentaryIdxToTimelineIdx = {};
+    timelineIdxToCommentaryId = {};
+    commentaryIdToIdx = {};
 
     allCommentaries.forEach((c, idx) => {
+        if (c.id != null) commentaryIdToIdx[c.id] = idx;
         const ballId = c.ball_id;
+        // Map by ball_id (for ball-linked commentaries)
         if (ballId != null && ballIdToTimelineIdx[ballId] !== undefined) {
             if (!ballIdToCommentaryIndices[ballId]) ballIdToCommentaryIndices[ballId] = [];
             ballIdToCommentaryIndices[ballId].push(idx);
             commentaryIdxToTimelineIdx[idx] = ballIdToTimelineIdx[ballId];
+        }
+        // Map non-ball commentaries (narratives) by seq proximity
+        else if (ballId == null && c.seq != null && seqToTimelineIdx[c.seq] !== undefined) {
+            commentaryIdxToTimelineIdx[idx] = seqToTimelineIdx[c.seq];
+        }
+    });
+
+    // Build timeline idx -> commentary id (for selected lang) for ID-based badge clicks
+    timelineItems.forEach((item, tlIdx) => {
+        let indices = null;
+        if (item.ball_id != null) indices = ballIdToCommentaryIndices[item.ball_id];
+        if (!indices || !indices.length) {
+            for (let ci = 0; ci < allCommentaries.length; ci++) {
+                if (commentaryIdxToTimelineIdx[ci] === tlIdx) {
+                    indices = [ci];
+                    break;
+                }
+            }
+        }
+        if (indices && indices.length && allCommentaries[indices[0]].id != null) {
+            timelineIdxToCommentaryId[tlIdx] = allCommentaries[indices[0]].id;
         }
     });
 
@@ -998,7 +1048,7 @@ function buildTimelineMaps() {
 // === Timeline: Render ===
 
 function renderTimeline() {
-    if (!timelineData || !timelineBalls.length) return;
+    if (!timelineData || !timelineItems.length) return;
 
     // Show timeline bar
     tlBar.classList.remove('hidden');
@@ -1017,17 +1067,42 @@ function renderTimeline() {
 }
 
 function renderInningsLabels() {
-    const innings = timelineData.innings || [];
-    const total = timelineBalls.length;
-    if (!total) return;
+    const inningsSummary = timelineData.innings_summary || [];
+    const total = timelineItems.length;
+    if (!total || !inningsSummary.length) return;
 
-    tlInningsLabels.innerHTML = innings.map(inn => {
-        const pct = ((inn.deliveries || inn.balls || []).length / total) * 100;
+    // Count items per innings (by the ball_info.innings or data.innings)
+    const innCounts = {};
+    for (const item of timelineItems) {
+        const innNum = (item.ball_info && item.ball_info.innings) || (item.data && item.data.innings) || 1;
+        innCounts[innNum] = (innCounts[innNum] || 0) + 1;
+    }
+
+    tlInningsLabels.innerHTML = inningsSummary.map(inn => {
+        const count = innCounts[inn.innings_number] || 0;
+        const pct = (count / total) * 100;
         return `<div class="timeline-innings-label" style="width:${pct}%">${inn.batting_team || 'Inn ' + inn.innings_number}</div>`;
     }).join('');
 }
 
-function getTimelineBadgeLabel(b) {
+function getTimelineBadgeLabel(item) {
+    // Event items (non-ball)
+    if (item.type === 'event') {
+        const et = item.event_type || '';
+        if (et === 'first_innings_start') {
+            return { badge: 'badge-event badge-innings-start', text: '', title: 'First Innings' };
+        }
+        if (et === 'second_innings_start') {
+            return { badge: 'badge-event badge-innings-start', text: '', title: 'Chase Begins' };
+        }
+        if (et === 'first_innings_end') {
+            return { badge: 'badge-event badge-innings-end', text: '', title: 'Innings Break' };
+        }
+        return { badge: 'badge-event', text: '', title: et.replace(/_/g, ' ') };
+    }
+
+    // Ball items — use ball_info
+    const b = item.ball_info || item.data || {};
     if (b.is_wicket) return { badge: 'badge-wicket', text: 'W', title: 'Wicket' };
     if (b.is_six) return { badge: 'badge-six', text: '6', title: 'Six' };
     if (b.is_boundary) return { badge: 'badge-four', text: '4', title: 'Four' };
@@ -1039,33 +1114,37 @@ function getTimelineBadgeLabel(b) {
 }
 
 function renderTimelineBadges() {
-    const total = timelineBalls.length;
+    debugger;
+    const total = timelineItems.length;
     if (!total) return;
 
     let html = '';
-    timelineBalls.forEach((b, i) => {
+    timelineItems.forEach((item, i) => {
         const pct = (i / (total - 1)) * 100;
-        const { badge, text, title } = getTimelineBadgeLabel(b);
-        html += `<div class="timeline-badge ${badge}" data-timeline-idx="${i}" style="left:${pct}%" title="${title}">${text}</div>`;
+        const { badge, text, title } = getTimelineBadgeLabel(item);
+        // const commentaryId = timelineIdxToCommentaryId[i];
+        const commentaryId = item.id;
+        const dataCommentaryId = commentaryId != null ? ` data-commentary-id="${commentaryId}"` : '';
+        html += `<div class="timeline-badge ${badge}" data-timeline-idx="${i}"${dataCommentaryId} style="left:${pct}%" title="${title}">${text}</div>`;
     });
     tlBadges.innerHTML = html;
 }
 
 function renderInningsSeparators() {
-    const innings = timelineData.innings || [];
-    const total = timelineBalls.length;
-    if (!total || innings.length <= 1) {
+    const total = timelineItems.length;
+    if (!total) {
         tlInningsSep.innerHTML = '';
         return;
     }
 
-    let cumulative = 0;
+    // Find innings break positions (first_innings_end or second_innings_start events)
     let html = '';
-    for (let i = 0; i < innings.length - 1; i++) {
-        cumulative += (innings[i].deliveries || innings[i].balls || []).length;
-        const pct = (cumulative / total) * 100;
-        html += `<div class="timeline-innings-sep-dot" style="left:${pct}%" title="Innings Break"></div>`;
-    }
+    timelineItems.forEach((item, i) => {
+        if (item.event_type === 'first_innings_end' || item.event_type === 'second_innings_start') {
+            const pct = (i / (total - 1)) * 100;
+            html += `<div class="timeline-innings-sep-dot" style="left:${pct}%" title="Innings Break"></div>`;
+        }
+    });
     tlInningsSep.innerHTML = html;
 }
 
@@ -1073,14 +1152,21 @@ function renderInningsSeparators() {
 // === Timeline: Filled Region ===
 
 function updateTimelineFilled() {
-    const total = timelineBalls.length;
+    const total = timelineItems.length;
     if (!total) { tlFilled.style.width = '0%'; return; }
 
-    // Find the furthest ball that has commentary
+    // Find the furthest item that is generated (has LLM content)
     let maxIdx = -1;
-    for (const ballId of Object.keys(ballIdToCommentaryIndices)) {
-        const tlIdx = ballIdToTimelineIdx[ballId];
-        if (tlIdx !== undefined && tlIdx > maxIdx) maxIdx = tlIdx;
+    timelineItems.forEach((item, idx) => {
+        if (item.is_generated && idx > maxIdx) maxIdx = idx;
+    });
+
+    // Fallback: also check if any ball has commentary in allCommentaries
+    if (maxIdx < 0) {
+        for (const ballId of Object.keys(ballIdToCommentaryIndices)) {
+            const tlIdx = ballIdToTimelineIdx[ballId];
+            if (tlIdx !== undefined && tlIdx > maxIdx) maxIdx = tlIdx;
+        }
     }
 
     if (maxIdx < 0) {
@@ -1110,7 +1196,7 @@ function getTimelinePositionFromPlayback() {
 }
 
 function updateTimelineCursor() {
-    const total = timelineBalls.length;
+    const total = timelineItems.length;
     if (!total) return;
 
     const pos = getTimelinePositionFromPlayback();
@@ -1161,17 +1247,34 @@ function initTimelineScrubbing() {
     document.addEventListener('touchend', onDocTouchEnd);
 }
 
-function getTimelineIdxFromEvent(e) {
+function getTimelineClickTarget(e) {
+    // If click/touch was on a badge, use its data for precise selection (ID-based)
+    const target = e.target;
+    const badge = target && target.closest ? target.closest('.timeline-badge') : null;
+    if (badge) {
+        const idxStr = badge.getAttribute('data-timeline-idx');
+        const commentaryIdStr = badge.getAttribute('data-commentary-id');
+        if (idxStr !== null && idxStr !== '') {
+            const idx = parseInt(idxStr, 10);
+            if (!isNaN(idx) && idx >= 0 && idx < timelineItems.length) {
+                const commentaryId = commentaryIdStr ? parseInt(commentaryIdStr, 10) : null;
+                return { idx, commentaryId: commentaryId && !isNaN(commentaryId) ? commentaryId : null };
+            }
+        }
+    }
+
+    // Fallback: position-based (for track clicks, drag)
     const rect = tlTrack.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
     const ratio = x / rect.width;
-    const idx = Math.round(ratio * (timelineBalls.length - 1));
-    return Math.max(0, Math.min(idx, timelineBalls.length - 1));
+    const idx = Math.round(ratio * (timelineItems.length - 1));
+    const safeIdx = Math.max(0, Math.min(idx, timelineItems.length - 1));
+    return { idx: safeIdx, commentaryId: timelineIdxToCommentaryId[safeIdx] || null };
 }
 
 function onTrackMouseDown(e) {
-    if (!timelineBalls.length) return;
+    if (!timelineItems.length) return;
     e.preventDefault();
     isDragging = true;
     tlTrack.classList.add('dragging');
@@ -1179,7 +1282,7 @@ function onTrackMouseDown(e) {
 }
 
 function onTrackTouchStart(e) {
-    if (!timelineBalls.length) return;
+    if (!timelineItems.length) return;
     e.preventDefault();
     isDragging = true;
     tlTrack.classList.add('dragging');
@@ -1201,6 +1304,10 @@ function onDocMouseUp() {
     if (isDragging) {
         isDragging = false;
         tlTrack.classList.remove('dragging');
+        // Play audio only when cursor is set (on release), not during drag
+        if (lastScrubHadCommentary && lastScrubCommentaryIdx != null) {
+            playFrom(lastScrubCommentaryIdx);
+        }
     }
 }
 
@@ -1208,31 +1315,64 @@ function onDocTouchEnd() {
     if (isDragging) {
         isDragging = false;
         tlTrack.classList.remove('dragging');
+        // Play audio only when cursor is set (on release), not during drag
+        if (lastScrubHadCommentary && lastScrubCommentaryIdx != null) {
+            playFrom(lastScrubCommentaryIdx);
+        }
     }
 }
 
-function scrubToPosition(e) {
-    const idx = getTimelineIdxFromEvent(e);
-    const ball = timelineBalls[idx];
-    if (!ball) return;
+function scrubToPosition(e, shouldPlay = false) {
+    const { idx, commentaryId } = getTimelineClickTarget(e);
+    const item = timelineItems[idx];
+    if (!item) return;
 
     // Move cursor visually immediately
-    const total = timelineBalls.length;
+    const total = timelineItems.length;
     const pct = (total > 1 ? (idx / (total - 1)) * 100 : 0);
     tlCursor.classList.remove('hidden');
     tlCursor.style.left = `${pct}%`;
 
-    // Update scoreboard to show state at this timeline position
-    applyScoreboardSnapshot(ball);
-    rebuildCumulativeStatsForTimelineIdx(idx);
+    // Update scoreboard for ball items
+    if (item.type === 'ball' && item.ball_info) {
+        applyScoreboardSnapshot(item.ball_info);
+        rebuildCumulativeStatsForTimelineIdx(idx);
+    } else {
+        // For events, find nearest preceding ball and apply its snapshot
+        for (let i = idx - 1; i >= 0; i--) {
+            if (timelineItems[i].type === 'ball' && timelineItems[i].ball_info) {
+                applyScoreboardSnapshot(timelineItems[i].ball_info);
+                rebuildCumulativeStatsForTimelineIdx(i);
+                break;
+            }
+        }
+    }
 
-    // Find commentary for this ball
-    const commentaryIndices = ballIdToCommentaryIndices[ball.ball_id];
-    if (commentaryIndices && commentaryIndices.length) {
-        // Find first commentary event for this ball
-        let targetIdx = commentaryIndices[0];
-        playFrom(targetIdx);
+    // Find commentary for this item: prefer ID-based (exact match) when clicking a badge
+    let playbackIdx = null;
+    if (commentaryId != null && commentaryIdToIdx[commentaryId] !== undefined) {
+        playbackIdx = commentaryIdToIdx[commentaryId];
+    }
+    if (playbackIdx == null) {
+        let commentaryIndices = null;
+        if (item.ball_id != null) commentaryIndices = ballIdToCommentaryIndices[item.ball_id];
+        if (!commentaryIndices || !commentaryIndices.length) {
+            for (let ci = 0; ci < allCommentaries.length; ci++) {
+                if (commentaryIdxToTimelineIdx[ci] === idx) {
+                    commentaryIndices = [ci];
+                    break;
+                }
+            }
+        }
+        if (commentaryIndices && commentaryIndices.length) playbackIdx = commentaryIndices[0];
+    }
 
+    if (playbackIdx != null) {
+        lastScrubCommentaryIdx = playbackIdx;
+        lastScrubHadCommentary = true;
+        if (shouldPlay) {
+            playFrom(playbackIdx);
+        }
         // Exit live mode if scrubbing backward
         if (matchStatus === 'generating') {
             const latestTimelineIdx = getLatestAvailableTimelineIdx();
@@ -1242,6 +1382,8 @@ function scrubToPosition(e) {
             }
         }
     } else {
+        lastScrubCommentaryIdx = null;
+        lastScrubHadCommentary = false;
         // No commentary — stop playback, keep scoreboard at scrubbed position
         pausePlayback();
         playbackIndex = -1;
@@ -1255,18 +1397,18 @@ function scrubToPosition(e) {
 
 function onTrackMouseMove(e) {
     if (isDragging) return; // Don't show tooltip while dragging
-    if (!timelineBalls.length) return;
+    if (!timelineItems.length) return;
 
-    const idx = getTimelineIdxFromEvent(e);
-    const ball = timelineBalls[idx];
-    if (!ball) {
+    const { idx } = getTimelineClickTarget(e);
+    const item = timelineItems[idx];
+    if (!item) {
         tlTooltip.classList.add('hidden');
         clearTimelineHover();
         return;
     }
 
     // Show cursor and highlight badge at hover position (like when dragging)
-    const total = timelineBalls.length;
+    const total = timelineItems.length;
     const pct = total > 1 ? (idx / (total - 1)) * 100 : 0;
     tlCursor.classList.remove('hidden');
     tlCursor.style.left = `${pct}%`;
@@ -1280,48 +1422,57 @@ function onTrackMouseMove(e) {
     const x = e.clientX - rect.left;
     const tooltipWidth = 180; // approximate
     let tooltipLeft = x;
-    // Clamp so tooltip doesn't overflow
     if (tooltipLeft < tooltipWidth / 2) tooltipLeft = tooltipWidth / 2;
     if (tooltipLeft > rect.width - tooltipWidth / 2) tooltipLeft = rect.width - tooltipWidth / 2;
     tlTooltip.style.left = `${tooltipLeft}px`;
 
-    // Over info
-    const overStr = `Over ${ball.over}.${ball.ball}`;
-    let badgeHtml = '';
-    if (ball.is_wicket) badgeHtml = '<span class="tooltip-badge tb-wicket">W</span>';
-    else if (ball.is_six) badgeHtml = '<span class="tooltip-badge tb-six">SIX</span>';
-    else if (ball.is_boundary) badgeHtml = '<span class="tooltip-badge tb-four">FOUR</span>';
-    tlTooltipOver.innerHTML = `${overStr} ${badgeHtml}`;
+    if (item.type === 'ball' && item.ball_info) {
+        const ball = item.ball_info;
+        // Over info
+        const overStr = `Over ${ball.over}.${ball.ball}`;
+        let badgeHtml = '';
+        if (ball.is_wicket) badgeHtml = '<span class="tooltip-badge tb-wicket">W</span>';
+        else if (ball.is_six) badgeHtml = '<span class="tooltip-badge tb-six">SIX</span>';
+        else if (ball.is_boundary) badgeHtml = '<span class="tooltip-badge tb-four">FOUR</span>';
+        tlTooltipOver.innerHTML = `${overStr} ${badgeHtml}`;
 
-    // Players
-    tlTooltipPlayers.textContent = `${ball.batter} vs ${ball.bowler}`;
+        // Players
+        tlTooltipPlayers.textContent = `${ball.batter} vs ${ball.bowler}`;
 
-    // Event / runs info
-    const hasCommentary = !!(ballIdToCommentaryIndices[ball.ball_id] && ballIdToCommentaryIndices[ball.ball_id].length);
-    if (ball.is_wicket) {
-        const wicketType = ball.wicket_type ? ball.wicket_type.toUpperCase() : 'OUT';
-        tlTooltipEvent.textContent = wicketType;
-        tlTooltipEvent.className = 'timeline-tooltip-event event-wicket';
-    } else if (ball.is_six) {
-        tlTooltipEvent.textContent = '6 runs';
-        tlTooltipEvent.className = 'timeline-tooltip-event event-six';
-    } else if (ball.is_boundary) {
-        tlTooltipEvent.textContent = '4 runs';
-        tlTooltipEvent.className = 'timeline-tooltip-event event-four';
-    } else if (ball.runs === 0 && ball.extras === 0) {
-        tlTooltipEvent.textContent = 'Dot ball';
-        tlTooltipEvent.className = 'timeline-tooltip-event event-dot';
+        // Event / runs info
+        const hasCommentary = !!(ballIdToCommentaryIndices[item.ball_id] && ballIdToCommentaryIndices[item.ball_id].length);
+        if (ball.is_wicket) {
+            const wicketType = (item.data && item.data.wicket_type) ? item.data.wicket_type.toUpperCase() : 'OUT';
+            tlTooltipEvent.textContent = wicketType;
+            tlTooltipEvent.className = 'timeline-tooltip-event event-wicket';
+        } else if (ball.is_six) {
+            tlTooltipEvent.textContent = '6 runs';
+            tlTooltipEvent.className = 'timeline-tooltip-event event-six';
+        } else if (ball.is_boundary) {
+            tlTooltipEvent.textContent = '4 runs';
+            tlTooltipEvent.className = 'timeline-tooltip-event event-four';
+        } else if (ball.runs === 0 && ball.extras === 0) {
+            tlTooltipEvent.textContent = 'Dot ball';
+            tlTooltipEvent.className = 'timeline-tooltip-event event-dot';
+        } else {
+            const totalRuns = (ball.runs || 0) + (ball.extras || 0);
+            let label = `${totalRuns} run${totalRuns !== 1 ? 's' : ''}`;
+            if (ball.extras > 0 && ball.extras_type) label += ` (${ball.extras_type})`;
+            tlTooltipEvent.textContent = label;
+            tlTooltipEvent.className = 'timeline-tooltip-event event-runs';
+        }
+
+        if (!hasCommentary) {
+            tlTooltipEvent.textContent += ' — No commentary';
+            tlTooltipEvent.className = 'timeline-tooltip-event event-unavail';
+        }
     } else {
-        const totalRuns = (ball.runs || 0) + (ball.extras || 0);
-        let label = `${totalRuns} run${totalRuns !== 1 ? 's' : ''}`;
-        if (ball.extras > 0 && ball.extras_type) label += ` (${ball.extras_type})`;
-        tlTooltipEvent.textContent = label;
-        tlTooltipEvent.className = 'timeline-tooltip-event event-runs';
-    }
-
-    if (!hasCommentary) {
-        tlTooltipEvent.textContent += ' — No commentary';
-        tlTooltipEvent.className = 'timeline-tooltip-event event-unavail';
+        // Event item tooltip — show event label only, no commentary text for structural points
+        const eventLabel = (item.event_type || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        tlTooltipOver.innerHTML = eventLabel;
+        tlTooltipPlayers.textContent = '';
+        tlTooltipEvent.textContent = '';
+        tlTooltipEvent.className = 'timeline-tooltip-event event-narrative';
     }
 
     tlTooltip.classList.remove('hidden');
@@ -1344,6 +1495,11 @@ function clearTimelineHover() {
 
 function getLatestAvailableTimelineIdx() {
     let maxIdx = -1;
+    // Check items with is_generated flag
+    timelineItems.forEach((item, idx) => {
+        if (item.is_generated && idx > maxIdx) maxIdx = idx;
+    });
+    // Also check via commentary mapping
     for (const ballId of Object.keys(ballIdToCommentaryIndices)) {
         const tlIdx = ballIdToTimelineIdx[ballId];
         if (tlIdx !== undefined && tlIdx > maxIdx) maxIdx = tlIdx;
@@ -1373,12 +1529,15 @@ function goLive() {
     // Jump to the latest available commentary
     const latestTlIdx = getLatestAvailableTimelineIdx();
     if (latestTlIdx >= 0) {
-        const ball = timelineBalls[latestTlIdx];
-        const commentaryIndices = ballIdToCommentaryIndices[ball.ball_id];
+        const item = timelineItems[latestTlIdx];
+        if (!item) return;
+
+        let commentaryIndices = null;
+        if (item.ball_id != null) {
+            commentaryIndices = ballIdToCommentaryIndices[item.ball_id];
+        }
         if (commentaryIndices && commentaryIndices.length) {
-            // Jump to the last commentary for the latest ball
             const lastCommentaryIdx = commentaryIndices[commentaryIndices.length - 1];
-            // Set playbackIndex to the next one so we wait for new
             playbackIndex = lastCommentaryIdx + 1;
             if (!isPlaying) {
                 isPlaying = true;
@@ -1403,8 +1562,9 @@ function hideTimeline() {
 
 function resetTimeline() {
     timelineData = null;
-    timelineBalls = [];
+    timelineItems = [];
     ballIdToTimelineIdx = {};
+    seqToTimelineIdx = {};
     ballIdToCommentaryIndices = {};
     commentaryIdxToTimelineIdx = {};
     isLiveMode = false;

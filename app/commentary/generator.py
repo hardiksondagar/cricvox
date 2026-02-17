@@ -17,13 +17,13 @@ logger = logging.getLogger(__name__)
 _client: AsyncOpenAI | None = None
 
 # Token budgets for max_completion_tokens.
-# Sized to accommodate audio tags (e.g. [excited], [gasps]) which the LLM
-# embeds for ElevenLabs v3 TTS — these add ~15-25 tokens on dramatic balls.
+# Sized for richer commentary with color (player context, match narrative,
+# tactical observations) plus audio tags for ElevenLabs v3 TTS.
 # Indic scripts use 2-3x more tokens per word than Latin scripts.
-_BALL_TOKENS_EN = 120
-_BALL_TOKENS_INDIC = 260
-_NARRATIVE_TOKENS_EN = 200
-_NARRATIVE_TOKENS_INDIC = 400
+_BALL_TOKENS_EN = 250
+_BALL_TOKENS_INDIC = 500
+_NARRATIVE_TOKENS_EN = 350
+_NARRATIVE_TOKENS_INDIC = 700
 
 
 def _max_tokens(base_en: int, base_indic: int, language: str) -> int:
@@ -134,7 +134,9 @@ def _fallback_narrative(moment_type: str, state: MatchState | None, **kwargs) ->
     bwt = state.bowling_team if state else kwargs.get("bowling_team", "")
 
     if moment_type == "first_innings_start":
-        return f"Welcome! {bt} vs {bwt}. The match is about to begin."
+        return f"Welcome to {kwargs.get('match_title', 'the match')} at {kwargs.get('venue', '')}! {bt} vs {bwt}."
+    if moment_type == "second_innings_end":
+        return kwargs.get("result_text", "And that's the match!")
     if moment_type == "first_innings_end":
         ft = kwargs.get("first_batting_team", bt)
         fr = kwargs.get("first_innings_runs", "")
@@ -143,8 +145,6 @@ def _fallback_narrative(moment_type: str, state: MatchState | None, **kwargs) ->
     if moment_type == "second_innings_start":
         target = state.target if state else kwargs.get("target", "")
         return f"{bt} need {target} to win. The chase is on!"
-    if moment_type == "match_result":
-        return kwargs.get("result_text", "And that's the match!")
     if moment_type == "end_of_over":
         if state:
             return (

@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """
-Drop all tables from the database. Tables are recreated by init_db() on next app startup.
+Drop all tables from the database and recreate them via init_db().
 
 Usage:
     python scripts/reset_db.py              # uses data/matches.db
     python scripts/reset_db.py path/to.db   # custom path
 """
 
+import asyncio
 import sqlite3
 import sys
 from pathlib import Path
+
+# Allow importing app when run as script
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # All table names in dependency order (children first)
 TABLES = [
@@ -35,8 +39,21 @@ def reset(db_path: str) -> None:
 
     conn.commit()
     conn.close()
-    print(f"\nDone. All tables dropped from: {db_path}")
-    print("Tables will be recreated on next app startup (init_db).")
+    print(f"\nRecreating tables via init_db()...")
+
+    # Point database module at this path and run init_db
+    import app.storage.database as db_mod
+    path = Path(db_path)
+    db_mod.DB_DIR = path.parent
+    db_mod.DB_PATH = path
+
+    async def recreate() -> None:
+        await db_mod.init_db()
+        await db_mod.close_db()
+
+    asyncio.run(recreate())
+    print(f"Done. All tables dropped and recreated: {db_path}")
+    print("Database is ready for use.")
 
 
 if __name__ == "__main__":

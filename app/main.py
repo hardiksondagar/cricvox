@@ -23,16 +23,18 @@ from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
 
 from app.models import SUPPORTED_LANGUAGES
+from app.commentary.prompts import strip_audio_tags
 from app.storage.database import (
     init_db, close_db,
     # Matches
     create_match, get_match, list_matches, update_match, delete_match,
     # Deliveries
     insert_delivery, insert_deliveries_bulk, get_deliveries, get_all_deliveries,
-    get_delivery_by_id, row_to_delivery_event,
+    get_delivery_by_id, row_to_delivery_event, get_max_seq,
     # Commentaries
     get_commentaries_after, get_commentary_by_id,
     get_commentaries_pending_audio, delete_commentaries,
+    insert_commentary, get_timeline_items,
     # Innings stats
     get_innings_batters, get_innings_bowlers, get_fall_of_wickets,
     # Innings & partnerships
@@ -48,6 +50,15 @@ from app.generate import (
 )
 from app.engine.precompute import precompute_match_context, precompute_ball_context
 from app.engine.state_manager import StateManager
+from app.commentary.precomputed_text import (
+    precomputed_delivery_text,
+    precomputed_first_innings_start_text,
+    precomputed_first_innings_end_text,
+    precomputed_second_innings_start_text,
+    precomputed_end_of_over_text,
+    precomputed_phase_change_text,
+    precomputed_second_innings_end_text,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -230,6 +241,324 @@ class BulkDeliveriesInput(BaseModel):
     deliveries: list[dict[str, Any]]
 
 
+def _match_languages(match: dict) -> list[str]:
+    """Get match languages, filtered to supported ones. Defaults to ['hi']."""
+    langs = match.get("languages") or ["hi"]
+    if isinstance(langs, str):
+        langs = [langs]
+    return [l for l in langs if l in SUPPORTED_LANGUAGES] or ["hi"]
+
+
+async def _insert_delivery_skeleton(
+    match_id: int, ball_id: int, seq: int, delivery: dict, languages: list[str],
+) -> int:
+    """Insert delivery skeleton rows (one per language) with precomputed text."""
+    d = delivery.get("data") or {}
+    oc = delivery.get('overs_completed', delivery['over'])
+    bio = delivery.get('balls_in_over', delivery['ball'])
+    overs_display = f"{oc}.{bio}"
+    data = {
+        "over": delivery["over"],
+        "ball": delivery["ball"],
+        "innings": delivery["innings"],
+        "batter": delivery["batter"],
+        "bowler": delivery["bowler"],
+        "non_batter": delivery.get("non_batter"),
+        "runs": delivery["runs"],
+        "extras": delivery["extras"],
+        "extras_type": delivery["extras_type"],
+        "is_wicket": delivery["is_wicket"],
+        "wicket_type": d.get("wicket_type"),
+        "is_boundary": delivery["is_boundary"],
+        "is_six": delivery["is_six"],
+        "total_runs": delivery.get("total_runs"),
+        "total_wickets": delivery.get("total_wickets"),
+        "overs": overs_display,
+        "crr": delivery.get("crr"),
+        "rrr": delivery.get("rrr"),
+        "runs_needed": delivery.get("runs_needed"),
+        "balls_remaining": delivery.get("balls_remaining"),
+        "match_phase": delivery.get("match_phase"),
+    }
+    text = precomputed_delivery_text({**delivery, **data})
+    for lang in languages:
+        await insert_commentary(
+            match_id=match_id, ball_id=ball_id, seq=seq,
+            event_type="delivery", language=lang, text=text, audio_url=None,
+            data=data, is_generated=False,
+        )
+    return len(languages)
+
+
+async def _create_structural_skeletons_for_ball(
+    match_id: int, ball_id: int, delivery: dict, match: dict,
+) -> int:
+    """
+    Create structural event skeletons for a single ball add.
+    All skeletons are tied to ball_id for delivery-based generation.
+    Returns count of skeletons inserted.
+    """
+    ctx = delivery.get("context") or {}
+
+    match_info = match.get("match_info", {})
+    innings_summaries = match_info.get("innings_summary", [])
+    first_innings = match_info.get("first_innings", {})
+    innings_num = delivery["innings"]
+    ball_index = delivery.get("ball_index", 0)
+
+    inn_meta = next(
+        (s for s in innings_summaries if s.get("innings_number") == innings_num), {}
+    )
+    batting_team = inn_meta.get("batting_team", match_info.get("batting_team", ""))
+    bowling_team = inn_meta.get("bowling_team", match_info.get("bowling_team", ""))
+    languages = _match_languages(match)
+
+    seq = await get_max_seq(match_id)
+    inserted = 0
+
+    # --- Pre-delivery: first_innings_start (first ball of match) ---
+    if innings_num == 1 and ball_index == 0:
+        seq += 1
+        first_inn = first_innings or {"batting_team": batting_team, "bowling_team": bowling_team}
+        text = precomputed_first_innings_start_text(match_info, first_inn)
+        for lang in languages:
+            await insert_commentary(
+                match_id, ball_id, seq, "first_innings_start", lang, text, None,
+                {**match_info, "first_innings": first_inn}, is_generated=False,
+            )
+            inserted += 1
+
+    # --- Pre-delivery: first_innings_end + second_innings_start (first ball of inn 2) ---
+    if innings_num == 2 and ball_index == 0:
+        inn1_deliveries = await get_deliveries(match_id, innings=1)
+        last_inn1_id = inn1_deliveries[-1]["id"] if inn1_deliveries else ball_id
+
+        seq += 1
+        text = precomputed_first_innings_end_text(first_innings)
+        for lang in languages:
+            await insert_commentary(
+                match_id, last_inn1_id, seq, "first_innings_end", lang, text, None,
+                {"innings": 1, **first_innings}, is_generated=False,
+            )
+            inserted += 1
+
+        seq += 1
+        text = precomputed_second_innings_start_text(match_info, first_innings)
+        for lang in languages:
+            await insert_commentary(
+                match_id, ball_id, seq, "second_innings_start", lang, text, None,
+                {"innings": 2, "target": match_info.get("target", 0)}, is_generated=False,
+            )
+            inserted += 1
+
+    # --- Delivery skeleton ---
+    seq += 1
+    inserted += await _insert_delivery_skeleton(match_id, ball_id, seq, delivery, languages)
+
+    # --- Post-delivery: from context narratives ---
+    narratives = ctx.get("narratives", [])
+    match_over = ctx.get("match_over", False)
+
+    for narr in narratives:
+        ntype = narr.get("type")
+        nkwargs = narr.get("kwargs", {})
+
+        if ntype == "end_of_over":
+            seq += 1
+            text = precomputed_end_of_over_text(nkwargs)
+            oc = delivery.get("overs_completed", delivery.get("over", 0))
+            for lang in languages:
+                await insert_commentary(
+                    match_id, ball_id, seq, "end_of_over", lang, text, None,
+                    {"innings": innings_num, "over": oc - 1, **nkwargs}, is_generated=False,
+                )
+                inserted += 1
+        elif ntype == "phase_change":
+            seq += 1
+            text = precomputed_phase_change_text(nkwargs)
+            for lang in languages:
+                await insert_commentary(
+                    match_id, ball_id, seq, "phase_change", lang, text, None,
+                    {"innings": innings_num, **nkwargs}, is_generated=False,
+                )
+                inserted += 1
+        elif ntype == "second_innings_end":
+            seq += 1
+            result = "won" if delivery.get("runs_needed", 1) <= 0 else "lost"
+            text = precomputed_second_innings_end_text({
+                "result": result,
+                "final_score": f"{delivery.get('total_runs', 0)}/{delivery.get('total_wickets', 0)}",
+                "overs": f"{delivery.get('overs_completed', 0)}.{delivery.get('balls_in_over', 0)}",
+            })
+            for lang in languages:
+                await insert_commentary(
+                    match_id, ball_id, seq, "second_innings_end", lang, text, None,
+                    {**nkwargs, "result": result}, is_generated=False,
+                )
+                inserted += 1
+
+    # --- first_innings_end (last ball of innings 1, when innings complete) ---
+    if innings_num == 1 and match_over:
+        seq += 1
+        text = precomputed_first_innings_end_text(
+            first_innings or {
+                "batting_team": batting_team,
+                "total_runs": delivery.get("total_runs", 0),
+                "total_wickets": delivery.get("total_wickets", 0),
+            }
+        )
+        for lang in languages:
+            await insert_commentary(
+                match_id, ball_id, seq, "first_innings_end", lang, text, None,
+                {"innings": 1, "batting_team": batting_team, "bowling_team": bowling_team,
+                 "total_runs": delivery.get("total_runs"), "total_wickets": delivery.get("total_wickets")},
+                is_generated=False,
+            )
+            inserted += 1
+
+    return inserted
+
+
+async def _create_bulk_commentary_skeletons(match_id: int, innings: int) -> int:
+    """
+    After bulk-inserting deliveries, create commentary skeleton rows.
+    All skeletons tied to ball_id. Includes precomputed text.
+    """
+    deliveries = await get_deliveries(match_id, innings)
+    if not deliveries:
+        return 0
+
+    match = await get_match(match_id)
+    if not match:
+        return 0
+
+    match_info = match.get("match_info", {})
+    innings_summaries = match_info.get("innings_summary", [])
+    first_innings = match_info.get("first_innings", {})
+
+    inn_meta = next(
+        (s for s in innings_summaries if s.get("innings_number") == innings), {}
+    )
+    batting_team = inn_meta.get("batting_team", match_info.get("batting_team", ""))
+    bowling_team = inn_meta.get("bowling_team", match_info.get("bowling_team", ""))
+
+    languages = _match_languages(match)
+    seq = await get_max_seq(match_id)
+    inserted = 0
+
+    # Innings 1: first_innings_start before first ball
+    if innings == 1:
+        first_id = deliveries[0]["id"]
+        seq += 1
+        first_inn = first_innings or {"batting_team": batting_team, "bowling_team": bowling_team}
+        text = precomputed_first_innings_start_text(match_info, first_inn)
+        for lang in languages:
+            await insert_commentary(
+                match_id, first_id, seq, "first_innings_start", lang, text, None,
+                {**match_info, "first_innings": first_inn}, is_generated=False,
+            )
+            inserted += 1
+
+    # Innings 2: first_innings_end (ball_id=last inn 1), second_innings_start (ball_id=first inn 2)
+    if innings == 2:
+        inn1 = await get_deliveries(match_id, innings=1)
+        last_inn1_id = inn1[-1]["id"] if inn1 else deliveries[0]["id"]
+
+        seq += 1
+        text = precomputed_first_innings_end_text(first_innings)
+        for lang in languages:
+            await insert_commentary(
+                match_id, last_inn1_id, seq, "first_innings_end", lang, text, None,
+                {"innings": 1, **first_innings}, is_generated=False,
+            )
+            inserted += 1
+
+        seq += 1
+        text = precomputed_second_innings_start_text(match_info, first_innings)
+        for lang in languages:
+            await insert_commentary(
+                match_id, deliveries[0]["id"], seq, "second_innings_start", lang, text, None,
+                {"innings": 2, "target": match_info.get("target", 0)}, is_generated=False,
+            )
+            inserted += 1
+
+    prev_over = None
+    last_ball_id = None
+    for d in deliveries:
+        curr_over = d["over"]
+        ctx = d.get("context") or {}
+
+        # end_of_over / phase_change when over changes (tied to last ball of previous over)
+        if prev_over is not None and curr_over != prev_over and last_ball_id:
+            # Get narratives from the last ball of the completed over
+            last_ball = next((x for x in deliveries if x["id"] == last_ball_id), None)
+            narratives = (last_ball or {}).get("context") or {}
+            narratives = narratives.get("narratives", []) if isinstance(narratives, dict) else []
+            phase_narr = next((n for n in narratives if n.get("type") == "phase_change"), None)
+            over_narr = next((n for n in narratives if n.get("type") == "end_of_over"), None)
+
+            if phase_narr:
+                seq += 1
+                text = precomputed_phase_change_text(phase_narr.get("kwargs", {}))
+                for lang in languages:
+                    await insert_commentary(
+                        match_id, last_ball_id, seq, "phase_change", lang, text, None,
+                        {"innings": innings, **phase_narr.get("kwargs", {})}, is_generated=False,
+                    )
+                    inserted += 1
+            elif over_narr:
+                seq += 1
+                text = precomputed_end_of_over_text(over_narr.get("kwargs", {}))
+                for lang in languages:
+                    await insert_commentary(
+                        match_id, last_ball_id, seq, "end_of_over", lang, text, None,
+                        {"innings": innings, "over": prev_over, **over_narr.get("kwargs", {})}, is_generated=False,
+                    )
+                    inserted += 1
+            else:
+                seq += 1
+                text = precomputed_end_of_over_text({"over": prev_over, "over_runs": 0, "bowler": ""})
+                for lang in languages:
+                    await insert_commentary(
+                        match_id, last_ball_id, seq, "end_of_over", lang, text, None,
+                        {"innings": innings, "over": prev_over}, is_generated=False,
+                    )
+                    inserted += 1
+
+        # Delivery skeleton
+        seq += 1
+        inserted += await _insert_delivery_skeleton(match_id, d["id"], seq, d, languages)
+        prev_over = curr_over
+        last_ball_id = d["id"]
+
+    # first_innings_end is created when processing innings 2 (above), not here — avoids duplicate
+
+    # second_innings_end after last ball of innings 2 when match over
+    if innings == 2:
+        last_d = deliveries[-1]
+        ctx = last_d.get("context") or {}
+        if ctx.get("match_over"):
+            for narr in ctx.get("narratives", []):
+                if narr.get("type") == "second_innings_end":
+                    seq += 1
+                    nkwargs = narr.get("kwargs", {})
+                    result = "won" if last_d.get("runs_needed", 1) <= 0 else "lost"
+                    text = precomputed_second_innings_end_text({
+                        "result": result,
+                        "final_score": f"{last_d.get('total_runs', 0)}/{last_d.get('total_wickets', 0)}",
+                        "overs": f"{last_d.get('overs_completed', 0)}.{last_d.get('balls_in_over', 0)}",
+                    })
+                    for lang in languages:
+                        await insert_commentary(
+                            match_id, last_d["id"], seq, "second_innings_end", lang, text, None,
+                            {**nkwargs, "result": result}, is_generated=False,
+                        )
+                        inserted += 1
+                    break
+
+    return inserted
+
+
 async def _update_innings_summary(match_id: int, innings: int) -> None:
     """
     Replay deliveries through StateManager and attach innings summary to match_info.
@@ -310,6 +639,11 @@ async def api_add_delivery(match_id: int, body: DeliveryInput):
     # Update innings summary
     await _update_innings_summary(match_id, body.innings)
 
+    # Auto-create structural + delivery skeletons (all tied to ball_id)
+    delivery = await get_delivery_by_id(ball_id)
+    if delivery:
+        await _create_structural_skeletons_for_ball(match_id, ball_id, delivery, match)
+
     return {
         "ball_id": ball_id,
         "match_id": match_id,
@@ -341,6 +675,9 @@ async def api_add_deliveries_bulk(match_id: int, body: BulkDeliveriesInput):
 
     # Compute and store innings summary
     await _update_innings_summary(match_id, body.innings)
+
+    # Auto-create commentary skeleton rows for all deliveries + structural events
+    await _create_bulk_commentary_skeletons(match_id, body.innings)
 
     return {
         "match_id": match_id,
@@ -538,63 +875,33 @@ async def api_delete_match_players(match_id: int):
 @app.get("/api/matches/{match_id}/timeline")
 async def api_match_timeline(match_id: int):
     """
-    Return all deliveries for both innings grouped by innings with team info.
-    Used by the frontend progress bar. Lightweight: no context or commentary.
+    Return a flat list of timeline items for the frontend progress bar.
+
+    Each item is either a 'ball' (with delivery snapshot) or an 'event'
+    (structural: first_innings_start, innings_break, end_of_over, etc.).
+
+    Items are ordered by seq. The frontend renders each item as a badge
+    and uses ball_info (when present) for scoreboard snapshots on scrub.
     """
     match = await get_match(match_id)
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
 
-    all_deliveries = await get_all_deliveries(match_id)
+    items = await get_timeline_items(match_id)
+    # Strip audio tags for display (DB stores raw text for TTS)
+    for item in items:
+        if item.get("text"):
+            item["text"] = strip_audio_tags(item["text"])
 
-    innings_map: dict[int, list] = {}
-    for b in all_deliveries:
-        inn = b["innings"]
-        if inn not in innings_map:
-            innings_map[inn] = []
-        data = b.get("data") or {}
-        overs_display = f"{b.get('overs_completed', b['over'])}.{b.get('balls_in_over', b['ball'])}"
-        innings_map[inn].append({
-            "ball_id": b["id"],
-            "over": b["over"],
-            "ball": b["ball"],
-            "batter": b["batter"],
-            "bowler": b["bowler"],
-            "non_batter": b.get("non_batter"),
-            "runs": b["runs"],
-            "extras": b["extras"],
-            "extras_type": b["extras_type"],
-            "is_wicket": b["is_wicket"],
-            "wicket_type": data.get("wicket_type"),
-            "is_boundary": b["is_boundary"],
-            "is_six": b["is_six"],
-            # Score snapshot after this delivery (for timeline scrubbing)
-            "total_runs": b.get("total_runs"),
-            "total_wickets": b.get("total_wickets"),
-            "overs": overs_display,
-            "crr": b.get("crr"),
-            "rrr": b.get("rrr"),
-            "runs_needed": b.get("runs_needed"),
-            "balls_remaining": b.get("balls_remaining"),
-            "match_phase": b.get("match_phase"),
-        })
-
+    # Also provide innings metadata for team names
     match_info = match.get("match_info", {})
     innings_summary = match_info.get("innings_summary", [])
-    innings_list = []
-    for inn_num in sorted(innings_map.keys()):
-        summary = next((s for s in innings_summary if s.get("innings_number") == inn_num), {})
-        innings_list.append({
-            "innings_number": inn_num,
-            "batting_team": summary.get("batting_team", ""),
-            "bowling_team": summary.get("bowling_team", ""),
-            "deliveries": innings_map[inn_num],
-        })
 
     return {
         "match_id": match_id,
         "status": match["status"],
-        "innings": innings_list,
+        "items": items,
+        "innings_summary": innings_summary,
     }
 
 
@@ -670,6 +977,11 @@ async def api_get_match_full(match_id: int):
         "target": match_info.get("target"),
     }
 
+    # Strip audio tags for display (DB stores raw text for TTS)
+    for c in all_commentaries:
+        if c.get("text"):
+            c["text"] = strip_audio_tags(c["text"])
+
     return {
         "match": match,
         "players": players,
@@ -695,6 +1007,10 @@ async def api_get_commentaries(match_id: int, after_seq: int = 0, language: str 
         raise HTTPException(status_code=404, detail="Match not found")
 
     commentaries = await get_commentaries_after(match_id, after_seq, language=language)
+    # Strip audio tags for display (DB stores raw text for TTS)
+    for c in commentaries:
+        if c.get("text"):
+            c["text"] = strip_audio_tags(c["text"])
     return {
         "match": match,
         "commentaries": commentaries,
@@ -707,6 +1023,8 @@ async def api_get_commentary(commentary_id: int):
     row = await get_commentary_by_id(commentary_id)
     if not row:
         raise HTTPException(status_code=404, detail="Commentary not found")
+    if row.get("text"):
+        row["text"] = strip_audio_tags(row["text"])
     return row
 
 
@@ -733,6 +1051,7 @@ async def api_generate_commentaries(
     overs: str | None = None,
     delivery_id: int | None = None,
     generate_audio: bool = False,
+    force_regenerate: bool = False,
 ):
     """
     Unified commentary generation endpoint.
@@ -745,6 +1064,7 @@ async def api_generate_commentaries(
         innings is required when overs is provided.
       - **delivery_id** (no overs): generate for that single delivery (sync).
       - **generate_audio** (default false): if true, also generate TTS audio after text.
+      - **force_regenerate** (default false): if true, re-generate even when commentary already exists.
     """
     match = await get_match(match_id)
     if not match:
@@ -764,6 +1084,7 @@ async def api_generate_commentaries(
         result = await generate_ball_commentary(
             match_id=match_id,
             ball_id=delivery_id,
+            force_regenerate=force_regenerate,
         )
         if result["status"] == "error":
             raise HTTPException(status_code=400, detail=result["message"])
@@ -794,12 +1115,14 @@ async def api_generate_commentaries(
 
         overs_0indexed = [o - 1 for o in overs_list]
 
-        async def _bg_overs(mid: int, inn: int, overs_0: list[int], audio: bool):
-            await generate_overs_commentary(mid, inn, overs_0)
+        async def _bg_overs(mid: int, inn: int, overs_0: list[int], audio: bool, force: bool):
+            await generate_overs_commentary(mid, inn, overs_0, force_regenerate=force)
             if audio:
                 await generate_overs_audio(mid, inn, overs_0)
 
-        background_tasks.add_task(_bg_overs, match_id, innings, overs_0indexed, generate_audio)
+        background_tasks.add_task(
+            _bg_overs, match_id, innings, overs_0indexed, generate_audio, force_regenerate
+        )
 
         return {
             "match_id": match_id,
@@ -807,6 +1130,7 @@ async def api_generate_commentaries(
             "innings": innings,
             "overs": overs_list,
             "generate_audio": generate_audio,
+            "force_regenerate": force_regenerate,
             "message": f"Commentary generation started for innings {innings} overs {overs_list}",
         }
 
@@ -814,17 +1138,18 @@ async def api_generate_commentaries(
     if match["status"] == "generating":
         raise HTTPException(status_code=409, detail="Generation already in progress")
 
-    async def _bg_match(mid: int, audio: bool):
-        await generate_match(mid)
+    async def _bg_match(mid: int, audio: bool, force: bool):
+        await generate_match(mid, force_regenerate=force)
         if audio:
             await generate_match_audio(mid)
 
-    background_tasks.add_task(_bg_match, match_id, generate_audio)
+    background_tasks.add_task(_bg_match, match_id, generate_audio, force_regenerate)
 
     return {
         "match_id": match_id,
         "status": "started",
         "generate_audio": generate_audio,
+        "force_regenerate": force_regenerate,
         "message": "Commentary generation started for all deliveries",
     }
 

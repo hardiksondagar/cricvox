@@ -399,13 +399,13 @@ async def test_commentary_crud():
     ball_id = await db.insert_delivery(mid, 1, 0, 0, 1, "Batter A", "Bowler X", {})
 
     cid1 = await db.insert_commentary(
-        mid, ball_id, 1, "commentary", "hi", "चौका! चार रन.", None, {}
+        mid, ball_id, 1, "delivery", "hi", "चौका! चार रन.", None, {}
     )
     cid2 = await db.insert_commentary(
-        mid, ball_id, 2, "commentary", "hi", "एक और रन.", None, {}
+        mid, ball_id, 2, "delivery", "hi", "एक और रन.", None, {}
     )
     cid3 = await db.insert_commentary(
-        mid, None, 3, "narrative", "hi", "पावरप्ले खत्म.", None, {"type": "phase_change"}
+        mid, None, 3, "phase_change", "hi", "पावरप्ले खत्म.", None, {"type": "phase_change"}
     )
 
     # get_commentaries_after
@@ -420,7 +420,7 @@ async def test_commentary_crud():
     comm = await db.get_commentary_by_id(cid1)
     assert comm is not None
     assert comm["text"] == "चौका! चार रन."
-    assert comm["event_type"] == "commentary"
+    assert comm["event_type"] == "delivery"
     assert comm["ball_id"] == ball_id
 
     # get_commentaries_pending_audio (all have no audio_url)
@@ -434,11 +434,11 @@ async def test_commentary_crud():
     comm_updated = await db.get_commentary_by_id(cid1)
     assert comm_updated["audio_url"] == "https://example.com/audio1.mp3"
 
-    # get_recent_commentary_texts (event_type='commentary' only)
+    # get_recent_commentary_texts (event_type='delivery' only)
     recent = await db.get_recent_commentary_texts(mid, "hi", limit=6)
     assert "चौका! चार रन." in recent
     assert "एक और रन." in recent
-    assert "पावरप्ले खत्म." not in recent  # narrative, not commentary
+    assert "पावरप्ले खत्म." not in recent  # phase_change, not delivery
 
     # delete_commentaries
     deleted = await db.delete_commentaries(mid)

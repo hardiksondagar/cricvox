@@ -127,10 +127,10 @@ async def synthesize(
             return None
 
     except httpx.HTTPStatusError as e:
-        logger.error(
+        logger.exception(
             f"ElevenLabs API error {e.response.status_code}: {e.response.text}"
         )
         return None
     except Exception as e:
-        logger.error(f"ElevenLabs TTS error: {e}")
+        logger.exception("ElevenLabs TTS error: %s", e)
         return None
