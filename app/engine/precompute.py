@@ -90,7 +90,11 @@ def _serialize_tracking(state) -> dict:
     Extract runtime tracking fields that the LLM prompt builder needs
     but are not stored in tables/columns.
     """
-    return {
+    batter = state.batters.get(state.current_batter) if state.current_batter else None
+    non_batter = state.batters.get(state.non_batter) if state.non_batter else None
+    bowler = state.bowlers.get(state.current_bowler) if state.current_bowler else None
+
+    result = {
         "over_runs_history": list(state.over_runs_history),
         "last_6_balls": list(state.last_6_balls),
         "consecutive_dots": state.consecutive_dots,
@@ -117,6 +121,27 @@ def _serialize_tracking(state) -> dict:
         "total_fours": state.total_fours,
         "total_sixes": state.total_sixes,
     }
+
+    if batter:
+        result["batter_stats"] = {
+            "runs": batter.runs, "balls": batter.balls_faced,
+            "fours": batter.fours, "sixes": batter.sixes,
+            "sr": round(batter.strike_rate, 2),
+        }
+    if non_batter:
+        result["non_batter_stats"] = {
+            "runs": non_batter.runs, "balls": non_batter.balls_faced,
+            "fours": non_batter.fours, "sixes": non_batter.sixes,
+            "sr": round(non_batter.strike_rate, 2),
+        }
+    if bowler:
+        result["bowler_stats"] = {
+            "wickets": bowler.wickets, "runs": bowler.runs_conceded,
+            "overs": round(bowler.balls_bowled / 6, 1),
+            "economy": round(bowler.economy, 2),
+        }
+
+    return result
 
 
 # ------------------------------------------------------------------ #

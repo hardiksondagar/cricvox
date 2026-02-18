@@ -764,6 +764,19 @@ function updateScoreboard(d) {
     if (d.non_batter) els.nonBatterName.textContent = d.non_batter;
     if (d.bowler) els.currentBowler.textContent = d.bowler;
 
+    if (d.batter_stats) {
+        els.batterRuns.textContent = d.batter_stats.runs ?? 0;
+        els.batterBalls.textContent = d.batter_stats.balls ?? 0;
+    }
+    if (d.non_batter_stats) {
+        els.nonBatterRuns.textContent = d.non_batter_stats.runs ?? 0;
+        els.nonBatterBalls.textContent = d.non_batter_stats.balls ?? 0;
+    }
+    if (d.bowler_stats) {
+        els.bowlerWickets.textContent = d.bowler_stats.wickets ?? 0;
+        els.bowlerRuns.textContent = d.bowler_stats.runs ?? 0;
+    }
+
     if (d.crr != null && d.rrr != null) updateRunRateBars(d.crr, d.rrr);
 
     const ballRuns = d.ball_runs ?? ((d.runs || 0) + (d.extras || 0));
@@ -799,6 +812,27 @@ function applyScoreboardSnapshot(ball) {
     els.batterName.textContent = ball.batter ?? '';
     els.nonBatterName.textContent = ball.non_batter ?? '';
     els.currentBowler.textContent = ball.bowler ?? '';
+    if (ball.batter_stats) {
+        els.batterRuns.textContent = ball.batter_stats.runs ?? 0;
+        els.batterBalls.textContent = ball.batter_stats.balls ?? 0;
+    } else {
+        els.batterRuns.textContent = '0';
+        els.batterBalls.textContent = '0';
+    }
+    if (ball.non_batter_stats) {
+        els.nonBatterRuns.textContent = ball.non_batter_stats.runs ?? 0;
+        els.nonBatterBalls.textContent = ball.non_batter_stats.balls ?? 0;
+    } else {
+        els.nonBatterRuns.textContent = '0';
+        els.nonBatterBalls.textContent = '0';
+    }
+    if (ball.bowler_stats) {
+        els.bowlerWickets.textContent = ball.bowler_stats.wickets ?? 0;
+        els.bowlerRuns.textContent = ball.bowler_stats.runs ?? 0;
+    } else {
+        els.bowlerWickets.textContent = '0';
+        els.bowlerRuns.textContent = '0';
+    }
     if (ball.crr != null && ball.rrr != null) updateRunRateBars(ball.crr, ball.rrr);
 }
 

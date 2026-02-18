@@ -1195,7 +1195,8 @@ async def get_commentaries_after(
                    b.overs_completed as b_overs_completed, b.balls_in_over as b_balls_in_over,
                    b.crr as b_crr, b.rrr as b_rrr,
                    b.runs_needed as b_runs_needed, b.balls_remaining as b_balls_remaining,
-                   b.match_phase as b_match_phase, b.data as ball_data
+                   b.match_phase as b_match_phase, b.data as ball_data,
+                   b.context as b_context
             FROM match_commentaries c
             LEFT JOIN deliveries b ON c.ball_id = b.id
             WHERE c.match_id = ? AND c.seq > ? AND (c.language = ? OR c.language IS NULL)
@@ -1213,7 +1214,8 @@ async def get_commentaries_after(
                    b.overs_completed as b_overs_completed, b.balls_in_over as b_balls_in_over,
                    b.crr as b_crr, b.rrr as b_rrr,
                    b.runs_needed as b_runs_needed, b.balls_remaining as b_balls_remaining,
-                   b.match_phase as b_match_phase, b.data as ball_data
+                   b.match_phase as b_match_phase, b.data as ball_data,
+                   b.context as b_context
             FROM match_commentaries c
             LEFT JOIN deliveries b ON c.ball_id = b.id
             WHERE c.match_id = ? AND c.seq > ?
@@ -1238,7 +1240,8 @@ async def get_commentary_by_id(commentary_id: int) -> dict | None:
                b.overs_completed as b_overs_completed, b.balls_in_over as b_balls_in_over,
                b.crr as b_crr, b.rrr as b_rrr,
                b.runs_needed as b_runs_needed, b.balls_remaining as b_balls_remaining,
-               b.match_phase as b_match_phase, b.data as ball_data
+               b.match_phase as b_match_phase, b.data as ball_data,
+               b.context as b_context
         FROM match_commentaries c
         LEFT JOIN deliveries b ON c.ball_id = b.id
         WHERE c.id = ?
@@ -1273,7 +1276,8 @@ async def get_commentaries_pending_audio(
                    b.overs_completed as b_overs_completed, b.balls_in_over as b_balls_in_over,
                    b.crr as b_crr, b.rrr as b_rrr,
                    b.runs_needed as b_runs_needed, b.balls_remaining as b_balls_remaining,
-                   b.match_phase as b_match_phase, b.data as ball_data
+                   b.match_phase as b_match_phase, b.data as ball_data,
+                   b.context as b_context
             FROM match_commentaries c
             LEFT JOIN deliveries b ON c.ball_id = b.id
             WHERE c.match_id = ? AND c.language = ?
@@ -1293,7 +1297,8 @@ async def get_commentaries_pending_audio(
                    b.overs_completed as b_overs_completed, b.balls_in_over as b_balls_in_over,
                    b.crr as b_crr, b.rrr as b_rrr,
                    b.runs_needed as b_runs_needed, b.balls_remaining as b_balls_remaining,
-                   b.match_phase as b_match_phase, b.data as ball_data
+                   b.match_phase as b_match_phase, b.data as ball_data,
+                   b.context as b_context
             FROM match_commentaries c
             LEFT JOIN deliveries b ON c.ball_id = b.id
             WHERE c.match_id = ? AND c.language IS NOT NULL
@@ -1360,7 +1365,8 @@ async def get_commentaries_pending_audio_by_ball_ids(
                    b.overs_completed as b_overs_completed, b.balls_in_over as b_balls_in_over,
                    b.crr as b_crr, b.rrr as b_rrr,
                    b.runs_needed as b_runs_needed, b.balls_remaining as b_balls_remaining,
-                   b.match_phase as b_match_phase, b.data as ball_data
+                   b.match_phase as b_match_phase, b.data as ball_data,
+                   b.context as b_context
             FROM match_commentaries c
             LEFT JOIN deliveries b ON c.ball_id = b.id
             WHERE c.match_id = ? AND c.ball_id IN ({placeholders})
@@ -1381,7 +1387,8 @@ async def get_commentaries_pending_audio_by_ball_ids(
                    b.overs_completed as b_overs_completed, b.balls_in_over as b_balls_in_over,
                    b.crr as b_crr, b.rrr as b_rrr,
                    b.runs_needed as b_runs_needed, b.balls_remaining as b_balls_remaining,
-                   b.match_phase as b_match_phase, b.data as ball_data
+                   b.match_phase as b_match_phase, b.data as ball_data,
+                   b.context as b_context
             FROM match_commentaries c
             LEFT JOIN deliveries b ON c.ball_id = b.id
             WHERE c.match_id = ? AND c.ball_id IN ({placeholders})
@@ -1700,7 +1707,7 @@ def _row_to_commentary(row: aiosqlite.Row) -> dict:
     if row["b_over"] is not None:
         ball_runs = (row["b_runs"] or 0) + (row["b_extras"] or 0)
         overs_display = f"{row['b_overs_completed']}.{row['b_balls_in_over']}"
-        result["ball_info"] = {
+        ball_info = {
             "innings": row["b_innings"],
             "over": row["b_over"],
             "ball": row["b_ball"],
@@ -1726,6 +1733,18 @@ def _row_to_commentary(row: aiosqlite.Row) -> dict:
             "match_phase": row["b_match_phase"],
             "data": json.loads(row["ball_data"]) if row["ball_data"] else None,
         }
+        # Extract per-player stats from precomputed context
+        ctx_raw = row["b_context"] if "b_context" in row.keys() else None
+        if ctx_raw:
+            ctx = json.loads(ctx_raw)
+            tracking = ctx.get("tracking", {})
+            if "batter_stats" in tracking:
+                ball_info["batter_stats"] = tracking["batter_stats"]
+            if "non_batter_stats" in tracking:
+                ball_info["non_batter_stats"] = tracking["non_batter_stats"]
+            if "bowler_stats" in tracking:
+                ball_info["bowler_stats"] = tracking["bowler_stats"]
+        result["ball_info"] = ball_info
     else:
         result["ball_info"] = None
     return result
