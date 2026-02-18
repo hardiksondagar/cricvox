@@ -23,6 +23,7 @@ let totalExtras = 0;
 let totalDotBalls = 0;
 let totalBalls = 0;
 let recentOversData = [];
+let currentInnings = 1;
 
 // Timeline state — derived entirely from allCommentaries
 let inningsSummary = [];            // From match.match_info.innings_summary
@@ -407,6 +408,14 @@ function processCommentaries(commentaries) {
             if (d.batting_team) els.battingTeam.textContent = d.batting_team;
             if (d.bowling_team) els.bowlingTeam.textContent = d.bowling_team;
             if (d.target) els.target.textContent = d.target;
+            updateChaseDisplay(1);
+            addCommentary(c, allCommentaries.length - 1);
+        } else if (c.event_type === 'second_innings_start') {
+            const d = c.data || {};
+            if (d.batting_team) els.battingTeam.textContent = d.batting_team;
+            if (d.bowling_team) els.bowlingTeam.textContent = d.bowling_team;
+            if (d.target) els.target.textContent = d.target;
+            updateChaseDisplay(2);
             addCommentary(c, allCommentaries.length - 1);
         } else if (c.event_type === 'delivery') {
             const d = c.data || {};
@@ -427,7 +436,7 @@ function processCommentaries(commentaries) {
         } else if (c.event_type === 'second_innings_end') {
             addCommentary(c, allCommentaries.length - 1);
         } else if ([
-            'first_innings_end', 'second_innings_start',
+            'first_innings_end',
             'end_of_over', 'phase_change', 'milestone', 'new_batter'
         ].includes(c.event_type)) {
             addCommentary(c, allCommentaries.length - 1);
@@ -562,6 +571,10 @@ function playCurrentCommentary() {
     scrollToPlayingItem(playbackIndex);
     updateTimelineCursor();
 
+    // Update innings display from narrative events
+    if (c.event_type === 'first_innings_start') updateChaseDisplay(1);
+    else if (c.event_type === 'second_innings_start') updateChaseDisplay(2);
+
     // Sync scoreboard to this commentary's ball_info
     if (c.ball_info) {
         const tlIdx = commIdxToTimelineIdx[playbackIndex];
@@ -631,8 +644,18 @@ function scrollToPlayingItem(idx) {
 }
 
 
+// === Chase Display (Target/RRR/Need — 2nd innings only) ===
+function updateChaseDisplay(innings) {
+    currentInnings = innings;
+    const show = innings >= 2;
+    document.querySelectorAll('.chase-only').forEach(el => {
+        el.classList.toggle('hidden', !show);
+    });
+}
+
 // === Scoreboard ===
 function updateScoreboard(d) {
+    if (d.innings != null) updateChaseDisplay(d.innings);
     if (d.total_runs != null) els.totalRuns.textContent = d.total_runs;
     if (d.total_wickets != null) els.wickets.textContent = d.total_wickets;
     if (d.overs) els.overs.textContent = d.overs;
@@ -667,6 +690,7 @@ function updateScoreboard(d) {
  */
 function applyScoreboardSnapshot(ball) {
     if (!ball) return;
+    if (ball.innings != null) updateChaseDisplay(ball.innings);
     if (ball.batting_team != null) els.battingTeam.textContent = ball.batting_team;
     if (ball.bowling_team != null) els.bowlingTeam.textContent = ball.bowling_team;
     if (ball.total_runs != null) els.totalRuns.textContent = ball.total_runs;
@@ -907,7 +931,10 @@ function addBallFeedItem(c, bi) {
     item.innerHTML = `
         <div class="feed-ball-col">
             <div class="feed-ball-over">${over}</div>
-            <div class="feed-ball-indicator ${indicatorClass}">${indicatorLabel}</div>
+            <div class="feed-ball-indicator-wrap">
+                <div class="feed-ball-indicator ${indicatorClass}">${indicatorLabel}</div>
+                <button class="feed-play-overlay" title="Play from here"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M8 5v14l11-7z"/></svg></button>
+            </div>
         </div>
         <div class="feed-content-col">
             <div class="feed-meta">
@@ -949,7 +976,10 @@ function addCommentary(c, idx) {
 
     item.innerHTML = `
         <div class="feed-ball-col">
-            <div class="feed-narrative-icon narrative-icon-${narrType}">${icon}</div>
+            <div class="feed-ball-indicator-wrap">
+                <div class="feed-narrative-icon narrative-icon-${narrType}">${icon}</div>
+                <button class="feed-play-overlay" title="Play from here"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M8 5v14l11-7z"/></svg></button>
+            </div>
         </div>
         <div class="feed-content-col">
             <div class="feed-meta">
@@ -964,6 +994,7 @@ function addCommentary(c, idx) {
 
 function clearCommentary() {
     commentaryFeed.innerHTML = '';
+    updateChaseDisplay(1);
     currentOverBalls = [];
     currentOverRuns = 0;
     totalBoundaries = { fours: 0, sixes: 0 };
@@ -1568,6 +1599,20 @@ function applyMatchLanguages(matchLangs) {
 // === Init ===
 (() => {
     initTimelineScrubbing();
+
+    // Event delegation: play from clicked feed item
+    commentaryFeed.addEventListener('click', (e) => {
+        const overlay = e.target.closest('.feed-play-overlay');
+        if (!overlay) return;
+        const feedItem = overlay.closest('.feed-item');
+        if (!feedItem) return;
+        const idx = parseInt(feedItem.getAttribute('data-idx'), 10);
+        if (!isNaN(idx)) {
+            e.stopPropagation();
+            playFrom(idx);
+        }
+    });
+
     routeFromUrl();
     if (!getMatchIdFromUrl()) {
         showHome();

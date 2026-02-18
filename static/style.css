@@ -109,6 +109,36 @@
     letter-spacing: -0.02em;
 }
 
+.feed-ball-indicator-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.feed-play-overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.9);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.feed-ball-indicator-wrap:hover .feed-play-overlay {
+    opacity: 1;
+    transform: scale(1);
+}
+
 .feed-ball-indicator {
     width: 32px;
     height: 32px;
