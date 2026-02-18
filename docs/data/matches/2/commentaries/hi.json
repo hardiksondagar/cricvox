@@ -6,213 +6,14 @@
     "seq": 1,
     "event_type": "first_innings_start",
     "language": "hi",
-    "text": "Match begins: India vs Pakistan at R.Premadasa Stadium, Colombo. India to bat first, Pakistan to bowl.",
-    "audio_url": "/static/audio/2/f6376d4561a55104.mp3",
+    "text": "\u0926\u094b\u0938\u094d\u0924\u094b\u0902, \u0938\u094d\u0935\u093e\u0917\u0924 \u0939\u0948 \u0906\u091c \u0915\u0940 \u092c\u0921\u093c\u0940 \u091f\u0915\u094d\u0915\u0930 \u092e\u0947\u0902 \u2014 India vs Pakistan, ICC Men\u2019s T20 World Cup 2026 \u0915\u093e \u092e\u0941\u0915\u093e\u092c\u0932\u093e, R.Premadasa Stadium, Colombo \u0938\u0947 LIVE! T20 cricket \u0915\u0940 \u092f\u0947 \u0930\u093e\u0924... \u092f\u0915\u0940\u0928 \u092e\u093e\u0928\u093f\u090f, \u0938\u0930\u094d\u0926\u0940-\u0917\u0930\u094d\u092e\u0940-\u092a\u093e\u0928\u0940 \u2014 \u0938\u092c \u092d\u0942\u0932 \u091c\u093e\u0913\u0917\u0947, \u0915\u094d\u092f\u094b\u0902\u0915\u093f \u0907\u0938 \u092e\u0941\u0915\u093e\u092c\u0932\u0947 \u092e\u0947\u0902 \u092c\u093f\u091c\u0932\u0940 \u0917\u093f\u0930\u0928\u0947 \u0935\u093e\u0932\u0940 \u0939\u0948\u0964 \u0906\u091c \u0907\u0902\u0921\u093f\u092f\u093e \u092a\u0939\u0932\u0947 bat \u0915\u0930\u0947\u0917\u0940, Pakistan \u0915\u0940 bowling \u092e\u0947\u0902 \u0926\u092e \u0926\u093f\u0916\u0947\u0917\u093e \u092f\u093e Indian batting line-up \u092e\u091a\u093e\u090f\u0917\u093e \u0927\u092e\u093e\u0932 \u2014 suspense \u0938\u093f\u0930 \u091a\u0922\u093c\u0915\u0930 \u092c\u094b\u0932\u0947\u0917\u093e\u0964 \u0924\u094b \u091a\u093f\u092a\u0915 \u091c\u093e\u0907\u090f, snacks \u0932\u0947 \u0906\u0907\u090f\u2026 cricket \u0915\u093e blockbuster \u0936\u0941\u0930\u0942 \u0939\u094b\u0928\u0947 \u0935\u093e\u0932\u093e \u0939\u0948!",
+    "audio_url": "/static/audio/2/c3e97e8e4a7cd39d.mp3",
     "is_generated": true,
     "data": {
-      "title": "India vs Pakistan, 27th Match, Group A, ICC Men's T20 World Cup 2026",
-      "venue": "R.Premadasa Stadium, Colombo",
-      "format": "T20",
-      "teams": [
-        "India",
-        "Pakistan"
-      ],
-      "team1": "India",
-      "team2": "Pakistan",
-      "team1_short": "IND",
-      "team2_short": "PAK",
-      "match_date": "Sun, Feb 15",
-      "time": "7:00 PM LOCAL, 1:30 PM GMT",
-      "toss": "Pakistan won the toss and opt to Bowl",
-      "result": "India won by 61 runs",
-      "series": "ICC Men's T20 World Cup 2026",
-      "umpires": "Kumar Dharmasena, Richard Illingworth",
-      "third_umpire": "Chris Gaffaney",
-      "referee": "Richie Richardson",
-      "venue_details": {
-        "stadium": "R.Premadasa Stadium",
-        "city": "Colombo, Sri Lanka",
-        "capacity": "35,000",
-        "ends": "Khettarama End, Scoreboard End",
-        "hosts_to": "Sri Lanka"
-      },
-      "batting_team": "Pakistan",
-      "bowling_team": "India",
-      "target": 176,
-      "innings_summary": [
-        {
-          "innings_number": 1,
-          "batting_team": "India",
-          "bowling_team": "Pakistan",
-          "total_runs": 175,
-          "total_wickets": 7,
-          "total_balls": 121,
-          "total_overs": 20.0,
-          "run_rate": 8.75,
-          "extras_total": 3,
-          "extras_detail": {
-            "b": 0,
-            "lb": 2,
-            "w": 1,
-            "nb": 0,
-            "p": 0
-          }
-        },
-        {
-          "innings_number": 2,
-          "batting_team": "Pakistan",
-          "bowling_team": "India",
-          "total_runs": 114,
-          "total_wickets": 10,
-          "total_balls": 111,
-          "total_overs": 18.0,
-          "run_rate": 6.33,
-          "extras_total": 4,
-          "extras_detail": {
-            "b": 0,
-            "lb": 1,
-            "w": 3,
-            "nb": 0,
-            "p": 0
-          },
-          "target": 176
-        }
-      ],
-      "first_innings": {
-        "batting_team": "India",
-        "bowling_team": "Pakistan",
-        "total_runs": 174,
-        "total_wickets": 7,
-        "top_scorers": "Ishan Kishan 77(40) [13x4, 3x6], Suryakumar Yadav 32(29) [3x4, 0x6], Shivam Dube 27(17) [4x4, 1x6], Tilak Varma 25(24) [3x4, 1x6]",
-        "top_bowlers": "Saim Ayub 3/25 (4.0), Shaheen Afridi 2/30 (2.0), Salman Agha 1/10 (2.0)",
-        "total_fours": 25,
-        "total_sixes": 6,
-        "total_extras": 3,
-        "batters": [
-          {
-            "name": "Ishan Kishan",
-            "runs": 77,
-            "balls": 40,
-            "fours": 13,
-            "sixes": 3,
-            "sr": 192.5
-          },
-          {
-            "name": "Suryakumar Yadav",
-            "runs": 32,
-            "balls": 29,
-            "fours": 3,
-            "sixes": 0,
-            "sr": 110.3
-          },
-          {
-            "name": "Shivam Dube",
-            "runs": 27,
-            "balls": 17,
-            "fours": 4,
-            "sixes": 1,
-            "sr": 158.8
-          },
-          {
-            "name": "Tilak Varma",
-            "runs": 25,
-            "balls": 24,
-            "fours": 3,
-            "sixes": 1,
-            "sr": 104.2
-          },
-          {
-            "name": "Rinku Singh",
-            "runs": 10,
-            "balls": 4,
-            "fours": 2,
-            "sixes": 1,
-            "sr": 250.0
-          },
-          {
-            "name": "Abhishek Sharma",
-            "runs": 0,
-            "balls": 4,
-            "fours": 0,
-            "sixes": 0,
-            "sr": 0.0
-          },
-          {
-            "name": "Hardik Pandya",
-            "runs": 0,
-            "balls": 1,
-            "fours": 0,
-            "sixes": 0,
-            "sr": 0.0
-          },
-          {
-            "name": "Axar Patel",
-            "runs": 0,
-            "balls": 1,
-            "fours": 0,
-            "sixes": 0,
-            "sr": 0.0
-          }
-        ],
-        "bowlers": [
-          {
-            "name": "Salman Agha",
-            "balls": 12,
-            "runs": 10,
-            "wickets": 1,
-            "overs": "2.0",
-            "economy": 5.0
-          },
-          {
-            "name": "Shaheen Afridi",
-            "balls": 12,
-            "runs": 30,
-            "wickets": 2,
-            "overs": "2.0",
-            "economy": 15.0
-          },
-          {
-            "name": "Saim Ayub",
-            "balls": 24,
-            "runs": 25,
-            "wickets": 3,
-            "overs": "4.0",
-            "economy": 6.25
-          },
-          {
-            "name": "Abrar Ahmed",
-            "balls": 18,
-            "runs": 38,
-            "wickets": 0,
-            "overs": "3.0",
-            "economy": 12.67
-          },
-          {
-            "name": "Shadab Khan",
-            "balls": 6,
-            "runs": 17,
-            "wickets": 0,
-            "overs": "1.0",
-            "economy": 17.0
-          },
-          {
-            "name": "Mohammad Nawaz",
-            "balls": 24,
-            "runs": 29,
-            "wickets": 0,
-            "overs": "4.0",
-            "economy": 7.25
-          },
-          {
-            "name": "Usman Tariq",
-            "balls": 24,
-            "runs": 25,
-            "wickets": 1,
-            "overs": "4.0",
-            "economy": 6.25
-          }
-        ]
-      }
+      "branch": "over_transition",
+      "is_pivot": false,
+      "is_narrative": true,
+      "narrative_type": "first_innings_start"
     },
     "created_at": "2026-02-16T14:07:01.772115+00:00",
     "ball_info": {
@@ -285,8 +86,8 @@
     "seq": 2,
     "event_type": "delivery",
     "language": "hi",
-    "text": "Dot ball! \u0936\u0941\u0930\u0941\u0906\u0924\u0940 nervous energy\u2014lag \u0930\u0939\u093e \u0939\u0948 Ishan Kishan \u0928\u0947 \u0905\u092d\u0940-\u0905\u092d\u0940 alarm snooze \u0915\u093f\u092f\u093e \u0939\u094b! Salman Agha \u092a\u0939\u0932\u0940 \u092c\u093e\u0930 ball \u0939\u093e\u0925 \u092e\u0947\u0902\u2014powerplay \u0915\u0940 \u092a\u0939\u0932\u0940 ball \u092a\u0930 \u0915\u094b\u0908 fireworks \u0928\u0939\u0940\u0902, \u092c\u0938 introduction \u0939\u0940 \u0939\u0941\u0906 \u0939\u0948 \u0905\u092d\u0940. Abhishek Sharma non-striker end \u092a\u0930 \u0907\u0902\u0924\u091c\u093c\u093e\u0930 \u0915\u0930 \u0930\u0939\u0947 \u0939\u0948\u0902, \u0914\u0930 opening partnership \u0905\u092d\u0940 \u092d\u0940 zero \u092a\u0930.",
-    "audio_url": "/static/audio/2/39a2b2c51dddb242.mp3",
+    "text": "Dot ball! Salman Agha \u0928\u0947 powerplay \u0915\u0940 \u092a\u0939\u0932\u0940 \u0939\u0940 \u0917\u0947\u0902\u0926 \u092a\u0930 Ishan Kishan \u0915\u094b \u092a\u0942\u0930\u0940 \u0924\u0930\u0939 \u092c\u093e\u0902\u0927 \u0926\u093f\u092f\u093e \u2014 \u092d\u093e\u0908, \u0936\u0941\u0930\u0941\u0906\u0924 \u0910\u0938\u0940 \u0915\u0940 \u091c\u0948\u0938\u0947 \u0928\u092f\u093e \u0938\u094d\u0915\u0942\u0932 \u092c\u0948\u0917 \u092a\u0939\u0932\u0940 \u092c\u093e\u0930 \u0916\u094b\u0932 \u0930\u0939\u0947 \u0939\u094b\u0902\u2026 \u0938\u092c \u0915\u0941\u091b \u0938\u0902\u092d\u0932-\u0938\u0902\u092d\u0932 \u0915\u0947! Kishan \u0905\u092d\u0940 zero \u092a\u0930 \u0905\u091f\u0915\u0947 \u0939\u0941\u090f \u0939\u0948\u0902, \u0914\u0930 scoreboard \u092d\u0940 \u0935\u0948\u0938\u0947 \u0915\u093e \u0935\u0948\u0938\u093e\u0964 Abhishek Sharma non-striker end \u092a\u0930\u2014\u0932\u0917\u0924\u093e \u0939\u0948 \u0926\u094b\u0928\u094b\u0902 \u0927\u0940\u0930\u0947-\u0927\u0940\u0930\u0947 engine \u0917\u0930\u092e \u0915\u0930 \u0930\u0939\u0947 \u0939\u0948\u0902\u0964",
+    "audio_url": "/static/audio/2/e5c9922eb72568d4.mp3",
     "is_generated": true,
     "data": {
       "branch": "routine",
@@ -364,8 +165,8 @@
     "seq": 3,
     "event_type": "delivery",
     "language": "hi",
-    "text": "Single \u0932\u093f\u092f\u093e Ishan Kishan \u0928\u0947\u2014\u092c\u0938 \u0939\u0932\u094d\u0915\u0940 \u0938\u0940 push \u0914\u0930 meter down! Scoreboard \u092a\u0930 \u092a\u0939\u0932\u0940 \u0932\u0915\u0940\u0930 \u092e\u093f\u0932 \u0917\u0908, \u092d\u093e\u0908 \u0905\u092c 1 \u092a\u0930\u2014\u0936\u0941\u0930\u0941\u0906\u0924 \u0924\u094b \u0939\u094b \u0917\u0908, \u0932\u0947\u0915\u093f\u0928 \u0905\u092d\u0940 \u0924\u094b Abhishek Sharma \u0915\u0940 debut ball \u092c\u093e\u0915\u0940 \u0939\u0948\u0964 Powerplay \u0915\u093e \u092e\u093e\u0939\u094c\u0932 \u0939\u0948, \u0926\u094b\u0928\u094b\u0902 \u0915\u094b \u092f\u0939\u0940\u0902 \u0938\u0947 momentum \u092a\u0915\u0921\u093c\u0928\u093e \u0939\u094b\u0917\u093e!",
-    "audio_url": "/static/audio/2/af60338aa2b8dc0f.mp3",
+    "text": "Single \u0932\u093f\u092f\u093e Ishan Kishan \u0928\u0947 \u2014 scoreboard \u092a\u0930 \u092a\u0939\u0932\u093e run! \u0927\u0940\u0930\u0947-\u0927\u0940\u0930\u0947 startup \u091c\u0948\u0938\u093e pace \u0939\u0948, \u0932\u0947\u0915\u093f\u0928 \u0936\u0941\u0930\u0941\u0906\u0924 \u0939\u094b \u0917\u0908 \u0939\u0948\u0964 Abhishek Sharma \u0905\u092c \u092a\u0939\u0932\u0940 \u092c\u093e\u0930 striker\u2019s end \u092a\u0930 \u0906\u090f\u0902\u0917\u0947 \u2014 debut nerves \u092c\u0928\u093e\u092e powerplay, interesting \u0926\u0947\u0916\u0928\u0947 \u0935\u093e\u0932\u093e moment! Salman Agha economical \u091a\u0932 \u0930\u0939\u0947 \u0939\u0948\u0902 \u2014 \u0926\u094b balls, \u092c\u0938 \u090f\u0915 run \u0926\u093f\u092f\u093e.",
+    "audio_url": "/static/audio/2/51f279d854c9533e.mp3",
     "is_generated": true,
     "data": {
       "branch": "routine",
@@ -443,8 +244,8 @@
     "seq": 4,
     "event_type": "delivery",
     "language": "hi",
-    "text": "Dot ball! Abhishek Sharma \u0915\u0947 \u0932\u093f\u090f \u0936\u0941\u0930\u0941\u0906\u0924 \u092c\u093f\u0932\u094d\u0915\u0941\u0932 \u0935\u0948\u0938\u0940 \u0939\u094b \u0930\u0939\u0940 \u0939\u0948 \u091c\u0948\u0938\u0947 Monday \u0938\u0941\u092c\u0939\u2014\u0915\u0941\u091b \u0939\u094b \u0928\u0939\u0940\u0902 \u0930\u0939\u093e, \u092c\u0938 \u091f\u093e\u0907\u092e \u092a\u093e\u0938 \u091a\u0932 \u0930\u0939\u093e \u0939\u0948\u0964 Salman Agha \u0928\u0947 \u0924\u0940\u0928 \u0917\u0947\u0902\u0926\u094b\u0902 \u092e\u0947\u0902 \u090f\u0915 \u0939\u0940 \u0930\u0928 \u0926\u093f\u092f\u093e \u0939\u0948, \u0914\u0930 Abhishek \u0905\u092d\u0940 \u0916\u093e\u0924\u093e \u092d\u0940 \u0928\u0939\u0940\u0902 \u0916\u094b\u0932 \u092a\u093e\u090f\u0964 Powerplay \u0939\u0948, field \u0916\u0941\u0932\u093e \u092a\u0921\u093c\u093e \u0939\u0948, \u0932\u0947\u0915\u093f\u0928 runs \u0910\u0938\u0947 \u0917\u093e\u092f\u092c \u0939\u0948\u0902 \u091c\u0948\u0938\u0947 \u0926\u094b\u0938\u094d\u0924 \u0915\u0940 \u0936\u093e\u0926\u0940 \u092e\u0947\u0902 diet food!",
-    "audio_url": "/static/audio/2/49c12da13f3b2f51.mp3",
+    "text": "\u0915\u094b\u0908 run \u0928\u0939\u0940\u0902 \u092e\u093f\u0932\u093e \u2014 Bilkul dead bat! Abhishek Sharma \u0905\u092d\u0940 \u092d\u0940 zero \u092a\u0930 \u0932\u091f\u0915\u0947 \u0939\u0941\u090f \u0939\u0948\u0902, \u0914\u0930 Salman Agha \u0915\u0940 bowling \u0907\u0924\u0928\u0940 tight \u0939\u0948 \u0915\u093f runs \u0915\u0940 entry banned \u0932\u0917 \u0930\u0939\u0940 \u0939\u0948\u0964 Powerplay \u0936\u0941\u0930\u0942 \u0939\u0940 \u0939\u0941\u0906 \u0939\u0948, \u092a\u0930 \u090f\u0915-\u090f\u0915 run \u0915\u0947 \u0932\u093f\u090f \u092d\u0940 gym \u091c\u093e\u0928\u093e \u092a\u0921\u093c\u0947\u0917\u093e!",
+    "audio_url": "/static/audio/2/8c539106ef2bbd74.mp3",
     "is_generated": true,
     "data": {
       "branch": "routine",
@@ -522,8 +323,8 @@
     "seq": 5,
     "event_type": "delivery",
     "language": "hi",
-    "text": "Dot ball. Abhishek Sharma \u0905\u092d\u0940 \u092d\u0940 zero \u092a\u0930 \u0905\u091f\u0915\u0947 \u092a\u0921\u093c\u0947 \u0939\u0948\u0902\u2014powerplay \u092e\u0947\u0902 \u0928\u090f batter \u0915\u0940 \u0939\u093e\u0932\u0924 \u0935\u0948\u0938\u0940 \u091c\u0948\u0938\u0947 Monday morning \u0935\u093e\u0932\u0940 \u0928\u0940\u0902\u0926, \u0916\u0941\u0932\u0915\u0947 \u0915\u0941\u091b \u0915\u0930 \u0928\u0939\u0940\u0902 \u092a\u093e \u0930\u0939\u0947! Salman Agha \u092c\u0921\u093c\u0940 economy \u0915\u0947 \u0938\u093e\u0925\u20144 balls, \u092c\u0938 1 run\u0964 Opening partnership \u092c\u0938 1 \u092a\u0947 \u091f\u093f\u0915 \u0917\u0908\u2026 \u0907\u0938\u0915\u093e \u092e\u0924\u0932\u092c scoreboard \u092a\u0930 boredom \u0915\u093e \u0924\u093e\u0932\u093e \u0932\u0917 \u0917\u092f\u093e \u0939\u0948!",
-    "audio_url": "/static/audio/2/6e7500289c31b81d.mp3",
+    "text": "Dot ball! Abhishek Sharma \u0915\u0940 \u0936\u0941\u0930\u0941\u0906\u0924 \u0935\u0948\u0938\u0947 \u0939\u0940 sluggish \u0939\u0948 \u091c\u0948\u0938\u0947 Monday \u0915\u0940 \u0938\u0941\u092c\u0939\u0964 \u0924\u0940\u0928 \u0917\u0947\u0902\u0926\u0947\u0902, \u0905\u092c \u092d\u0940 ZERO \u2014 Salman Agha \u092c\u0938 spinner \u0928\u0939\u0940\u0902, traffic police \u092c\u0928 \u0917\u090f \u0939\u0948\u0902, \u0938\u092c\u0915\u094b \u0930\u094b\u0915\u0947 \u092c\u0948\u0920\u0947 \u0939\u0948\u0902! Powerplay \u092e\u0947\u0902 \u092d\u0940 \u0910\u0938\u0940 slow-mo batting, \u092d\u093e\u0908, fan base \u0924\u094b \u0905\u092d\u0940 \u0924\u0915 chai \u092c\u0928\u093e \u0930\u0939\u093e \u0939\u094b\u0917\u093e!",
+    "audio_url": "/static/audio/2/64a08ace69d7db6a.mp3",
     "is_generated": true,
     "data": {
       "branch": "routine",
@@ -601,8 +402,8 @@
     "seq": 6,
     "event_type": "delivery",
     "language": "hi",
-    "text": "Dot ball! Abhishek Sharma \u0915\u093e \u0916\u093e\u0924\u093e \u0905\u092c \u092d\u0940 \u091c\u093c\u0940\u0930\u094b \u092a\u0930 \u0905\u091f\u0915\u093e \u0939\u0948 \u092d\u093e\u0908\u2026 \u0924\u0940\u0928 \u0932\u0917\u093e\u0924\u093e\u0930 dot balls \u2014 \u0909\u0924\u0928\u0940 \u0936\u093e\u0902\u0924\u093f \u0924\u094b library \u092e\u0947\u0902 \u092d\u0940 \u0928\u0939\u0940\u0902 \u092e\u093f\u0932\u0924\u0940! Salman Agha \u0905\u092d\u0940 \u0924\u0915 runs \u0915\u0947 \u0932\u093f\u090f gatekeeper \u092c\u0928\u0947 \u0939\u0941\u090f \u0939\u0948\u0902, powerplay \u092e\u0947\u0902 5 ball \u092a\u0930 \u0938\u093f\u0930\u094d\u092b 1 run \u2014 \u092f\u093e\u0928\u093f \u092c\u0932\u094d\u0932\u0947\u092c\u093e\u091c\u093c\u0940 \u090f\u0915\u0926\u092e traffic jam \u092e\u0947\u0902 \u092b\u0901\u0938\u0940 \u0939\u0941\u0908 \u0939\u0948.",
-    "audio_url": "/static/audio/2/d356bc49e5a3472a.mp3",
+    "text": "Dot ball! Abhishek Sharma \u0915\u093e scoreboard \u0905\u092d\u0940 \u092d\u0940 \u0935\u0948\u0938\u093e \u0939\u0940 \u0916\u093e\u0932\u0940 \u092a\u0921\u093c\u093e \u0939\u0948, \u091c\u0948\u0938\u0947 Sunday \u0938\u0941\u092c\u0939 gym \u092e\u0947\u0902 attendance. Powerplay \u092e\u0947\u0902 \u0924\u0940\u0928 \u0932\u0917\u093e\u0924\u093e\u0930 dot\u2014\u092c\u093f\u0932\u094d\u0915\u0941\u0932 \u0935\u0948\u0938\u0947 \u0939\u0940 \u092b\u0902\u0938\u0947 \u0939\u0948\u0902 \u091c\u0948\u0938\u0947 WhatsApp \u092a\u0930 last seen hide \u0915\u0930\u0915\u0947 \u092c\u0948\u0920\u0947 \u0939\u094b! Salman Agha \u0915\u093e spell \u0905\u092c \u0924\u0915 \u0924\u094b debit card \u0915\u0940 spending limit \u091c\u0948\u0938\u093e tight \u091a\u0932 \u0930\u0939\u093e \u0939\u0948\u20140/1 in 0.5, economy \u0938\u093f\u0930\u094d\u092b 1.2!",
+    "audio_url": "/static/audio/2/f67778c05e2e4a2b.mp3",
     "is_generated": true,
     "data": {
       "branch": "pressure_builder",
@@ -680,8 +481,8 @@
     "seq": 7,
     "event_type": "delivery",
     "language": "hi",
-    "text": "OUT! \u0914\u0930 Abhishek Sharma \u0917\u090f \u2014 \u092a\u0939\u0932\u0940 \u0939\u0940 over \u092e\u0947\u0902 \u092c\u0921\u093c\u093e \u091d\u091f\u0915\u093e! Salman Agha \u0928\u0947 \u0916\u0941\u0926 \u0915\u0947 \u0928\u093e\u092e \u092a\u0939\u0932\u093e wicket \u0932\u093f\u0916\u0935\u093e \u0932\u093f\u092f\u093e, \u0914\u0930 Sharma \u092c\u093f\u0928\u093e \u0916\u093e\u0924\u093e \u0916\u094b\u0932\u0947, 0 \u092a\u0930 \u0932\u094c\u091f \u0917\u090f pavilion. \u092d\u093e\u0908, debut \u092d\u0940 \u0914\u0930 duck \u092d\u0940\u2026 \u0907\u0938 \u0938\u0947 \u0924\u094b Tinder \u0915\u0940 date \u091c\u093c\u094d\u092f\u093e\u0926\u093e promising \u0932\u0917\u0924\u0940! India 1 \u092a\u0930 1 \u0914\u0930 powerplay \u0915\u093e drama \u0936\u0941\u0930\u0942 \u0939\u094b\u0924\u0947 \u0939\u0940 scoreboard \u092e\u0947\u0902 suspense \u092d\u0930 \u0917\u092f\u093e \u2014 Ishan Kishan \u0905\u092c crease \u092a\u0930, \u0932\u0947\u0915\u093f\u0928 Salman Agha \u0915\u093e \u092f\u0947 opening over \u0924\u094b \u090f\u0915\u0926\u092e economical\u20141 run, 1 wicket!",
-    "audio_url": "/static/audio/2/641879b6c18241ab.mp3",
+    "text": "OUT! Abhishek Sharma \u0917\u092f\u093e\u2014caught! Powerplay \u0915\u0940 \u092a\u0939\u0932\u0940 \u0939\u0940 over \u092e\u0947\u0902 top-order \u0915\u0940 \u091b\u0941\u091f\u094d\u091f\u0940. \u091a\u093e\u0930 \u0917\u0947\u0902\u0926\u0947\u0902 \u0916\u0947\u0932\u0947 \u0914\u0930 \u090f\u0915 \u092d\u0940 \u0930\u0928 \u0928\u0939\u0940\u0902 \u092c\u0928\u093e \u092a\u093e\u090f\u2014scoreboard \u092a\u0947 duck \u0915\u093e symbol \u0932\u0917 \u0917\u092f\u093e! Salman Agha\u2014\u0915\u094d\u092f\u093e \u0936\u0941\u0930\u0942\u0906\u0924 \u0915\u0940 \u0939\u0948 \u092d\u093e\u0908, \u090f\u0915 over, \u090f\u0915 wicket, \u0938\u093f\u0930\u094d\u092b \u090f\u0915 run. \u0907\u0902\u0921\u093f\u092f\u093e \u0915\u093e \u0916\u093e\u0924\u093e \u0916\u0941\u0932\u0924\u0947 \u0939\u0940 lock \u092d\u0940 \u0939\u094b \u0917\u092f\u093e\u20141/1, \u0914\u0930 dressing room \u092e\u0947\u0902 \u0939\u0932\u091a\u0932 \u0936\u0941\u0930\u0942! Early jitters, \u092c\u0939\u0941\u0924 \u0915\u092e \u092e\u0948\u091a \u0910\u0938\u0947 \u0926\u0947\u0916\u0947 \u0939\u0948\u0902 \u091c\u0939\u093e\u0902 target zero \u0939\u0948 \u0914\u0930 \u092b\u093f\u0930 \u092d\u0940 \u0926\u092c\u093e\u0935 \u0910\u0938\u0947 \u092e\u0939\u0938\u0942\u0938 \u0939\u094b \u0930\u0939\u093e \u0939\u094b!",
+    "audio_url": "/static/audio/2/072ca8c4062fc051.mp3",
     "is_generated": true,
     "data": {
       "branch": "wicket_drama",
@@ -759,8 +560,8 @@
     "seq": 8,
     "event_type": "end_of_over",
     "language": "hi",
-    "text": "\u0938\u0932\u092e\u093e\u0928 \u0906\u0917\u093e \u0928\u0947 \u092a\u0939\u0932\u093e over \u090f\u0915\u0926\u092e firecracker \u0915\u0940 \u0924\u0930\u0939 \u092b\u0947\u0902\u0915\u093e\u2014\u0938\u093f\u0930\u094d\u092b 1 \u0930\u0928 \u0926\u093f\u092f\u093e \u0914\u0930 Abhishek Sharma \u0915\u094b \u092a\u0939\u0932\u0940 \u0939\u0940 over \u092e\u0947\u0902 OUT \u0915\u0930 \u0926\u093f\u092f\u093e\u0964 India \u0905\u092d\u0940 pressure \u092e\u0947\u0902 \u0939\u0948, 1 \u0930\u0928 \u092a\u0930 1 wicket \u0917\u093f\u0930 \u091a\u0941\u0915\u093e \u0939\u0948, powerplay \u0915\u093e \u092a\u0939\u0932\u093e over \u0907\u0924\u0928\u093e economical\u2014Salman \u0915\u0947 figures 1/1 (1.0)\u2014\u092f\u093e\u0928\u0940 Pakistan \u0915\u094b dream start \u092e\u093f\u0932 \u0917\u092f\u093e\u0964 Ishan Kishan \u0905\u092c crease \u092a\u0930\u2014\u0905\u092c \u0926\u0947\u0916\u0928\u093e \u0939\u094b\u0917\u093e \u092c\u093e\u0915\u0940 batting lineup \u0915\u0948\u0938\u0947 \u0938\u0902\u092d\u093e\u0932\u0924\u0940 \u0939\u0948\u0964",
-    "audio_url": "/static/audio/2/6c8d22851cb57dea.mp3",
+    "text": "\u092a\u0939\u0932\u093e over \u092a\u0942\u0930\u093e \u0939\u094b \u091a\u0941\u0915\u093e \u0939\u0948 \u0914\u0930 \u0907\u0902\u0921\u093f\u092f\u093e \u0915\u093e scoreboard \u0939\u0948 1/1 \u2014 \u092c\u0938 \u090f\u0915 \u0930\u0928 \u092c\u0928\u093e, \u090f\u0915 wicket \u092d\u0940 \u091a\u0932\u093e \u0917\u092f\u093e! Target \u0924\u094b zero \u0939\u0948, \u0932\u0947\u0915\u093f\u0928 pressure \u0907\u0938 \u0924\u0930\u0939 \u0939\u0948 \u091c\u0948\u0938\u0947 defence exam \u0915\u093e \u0906\u0916\u093f\u0930\u0940 attempt \u0939\u094b. Start \u0925\u094b\u0921\u093c\u093e shaky \u0939\u0948, Abhishek Sharma early OUT, \u0905\u092c \u0938\u093e\u0930\u0940 \u0928\u091c\u0930\u0947\u0902 Ishan Kishan \u092a\u0930 \u091f\u093f\u0915\u0940 \u0930\u0939\u0947\u0902\u0917\u0940.",
+    "audio_url": "/static/audio/2/9fefef0c0b5cde74.mp3",
     "is_generated": true,
     "data": {
       "branch": "over_transition",
