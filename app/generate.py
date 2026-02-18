@@ -292,6 +292,7 @@ async def generate_match(match_id: int, start_over: int = 1, force_regenerate: b
             await mark_event_skeleton_generated(match_id, "first_innings_end", last_inn1_id)
 
         seq += 1
+        first_ball = live[0][1] if live else None
         await _generate_narrative_all_langs(
             match_id, first_inn2_id, seq, "second_innings_start", state, languages,
             force_regenerate=force_regenerate,
@@ -300,6 +301,9 @@ async def generate_match(match_id: int, start_over: int = 1, force_regenerate: b
             first_innings_wickets=first_innings.get("total_wickets", 0),
             venue=match_info.get("venue", ""),
             match_title=match_info.get("title", ""),
+            opener1=first_ball.batter if first_ball else "",
+            opener2=first_ball.non_batter if first_ball else "",
+            opening_bowler=first_ball.bowler if first_ball else "",
         )
         await mark_event_skeleton_generated(match_id, "second_innings_start", first_inn2_id)
     # ============================================================ #
@@ -568,6 +572,7 @@ def _narrative_kwargs_for_event(
     match_info: dict,
     first_innings: dict,
     state,
+    ball_row: dict | None = None,
 ) -> dict:
     """Build kwargs for generate_narrative from row data, match_info, and state."""
     kwargs = dict(row_data) if row_data else {}
@@ -607,6 +612,12 @@ def _narrative_kwargs_for_event(
     kwargs.setdefault("first_innings_fours", first_innings.get("total_fours", 0))
     kwargs.setdefault("first_innings_sixes", first_innings.get("total_sixes", 0))
     kwargs.setdefault("first_innings_extras", first_innings.get("total_extras", 0))
+
+    # second_innings_start: opener names from the linked delivery row
+    if event_type == "second_innings_start" and ball_row:
+        kwargs.setdefault("opener1", ball_row.get("batter", ""))
+        kwargs.setdefault("opener2", ball_row.get("non_batter", ""))
+        kwargs.setdefault("opening_bowler", ball_row.get("bowler", ""))
 
     # From state
     if state:
@@ -727,6 +738,7 @@ async def generate_ball_commentary(
             elif event_type in NARRATIVE_PROMPTS:
                 kwargs = _narrative_kwargs_for_event(
                     event_type, row["data"], match_info, first_innings, state,
+                    ball_row=ball_row,
                 )
                 text = await generate_narrative(
                     event_type, state, language=lang, **kwargs

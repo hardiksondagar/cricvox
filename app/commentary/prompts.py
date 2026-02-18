@@ -657,11 +657,14 @@ Be analytical but warm. 3-4 sentences. This is a moment to reflect before the ch
 They are chasing against {bowling_team}.
 First innings: {first_batting_team} scored {first_innings_runs}/{first_innings_wickets}.
 
+Opening batters: {opener1} and {opener2}
+Opening bowler: {opening_bowler}
 Venue: {venue}
 Match: {match_title}
 
 This is the START of the chase. Set the scene — the target, the challenge, the pressure.
-Name who's opening. Build the tension. 2-3 sentences. This is a reset moment — fresh energy.""",
+Mention the opening batters by name (ONLY use the names above — do NOT invent or substitute players).
+Build the tension. 2-3 sentences. This is a reset moment — fresh energy.""",
 
     # ------------------------------------------------------------------ #
     #  MATCH END — result announcement + summary with key points
