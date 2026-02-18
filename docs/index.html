@@ -25,7 +25,7 @@
 
     <!-- Nav -->
     <nav class="sticky top-0 z-50 bg-neutral-950/80 backdrop-blur-xl border-b border-white/5">
-        <div class="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
+        <div class="max-w-6xl mx-auto px-3 sm:px-5 h-12 sm:h-14 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <button id="backToHome" onclick="showHome()" class="flex items-baseline gap-2 text-xl font-bold tracking-tight text-white hover:text-emerald-400 transition-colors cursor-pointer">
                     <span class="whitespace-nowrap tracking-normal">Cric<span class="text-emerald-400">Vox</span></span>
@@ -43,7 +43,7 @@
     <!-- ============================================================ -->
     <!-- HOME VIEW: Match List -->
     <!-- ============================================================ -->
-    <div id="homeView" class="max-w-3xl mx-auto px-5 py-8">
+    <div id="homeView" class="max-w-3xl mx-auto px-3 sm:px-5 py-6 sm:py-8">
         <div class="flex items-center justify-between mb-6">
             <h1 class="text-lg font-bold text-white">Matches</h1>
             <button onclick="loadMatchList()" class="h-8 px-3 text-xs font-medium bg-white/5 hover:bg-white/10 text-neutral-400 rounded-md transition-colors">
@@ -58,32 +58,32 @@
     <!-- ============================================================ -->
     <!-- MATCH VIEW: Live / Replay Dashboard -->
     <!-- ============================================================ -->
-    <main id="matchView" class="max-w-6xl mx-auto px-5 py-6 pb-24 hidden">
+    <main id="matchView" class="max-w-6xl mx-auto px-3 sm:px-5 py-4 sm:py-6 pb-20 sm:pb-24 hidden">
 
         <!-- Match Info Strip -->
-        <div class="flex items-center justify-center gap-3 mb-6 text-xs text-neutral-500">
+        <div class="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6 text-[11px] sm:text-xs text-neutral-500 flex-wrap text-center px-2">
             <span class="font-medium">ICC T20 World Cup 2024</span>
-            <span class="text-neutral-700">/</span>
-            <span>Final</span>
-            <span class="text-neutral-700">/</span>
-            <span>Kensington Oval, Barbados</span>
+            <span class="text-neutral-700 hidden sm:inline">/</span>
+            <span class="hidden sm:inline">Final</span>
+            <span class="text-neutral-700 hidden sm:inline">/</span>
+            <span class="hidden sm:inline">Kensington Oval, Barbados</span>
         </div>
 
         <!-- Scoreboard -->
-        <section id="scoreboard" class="mb-8">
-            <div class="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12">
+        <section id="scoreboard" class="mb-6 sm:mb-8">
+            <div class="flex flex-col md:flex-row items-center justify-center gap-4 sm:gap-6 md:gap-12">
                 <!-- Batting Team -->
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3 sm:gap-4">
                     <div class="text-right">
-                        <div id="battingTeam" class="text-lg font-bold text-white">India</div>
-                        <div class="text-[11px] text-neutral-500 uppercase tracking-wider font-medium">Batting</div>
+                        <div id="battingTeam" class="text-base sm:text-lg font-bold text-white">India</div>
+                        <div class="text-[10px] sm:text-[11px] text-neutral-500 uppercase tracking-wider font-medium">Batting</div>
                     </div>
-                    <div class="flex items-baseline gap-1">
-                        <span id="totalRuns" class="text-6xl font-black tabular-nums text-white leading-none score-glow">0</span>
-                        <span class="text-3xl font-light text-neutral-600">/</span>
-                        <span id="wickets" class="text-3xl font-bold tabular-nums text-red-400">0</span>
+                    <div class="flex items-baseline gap-0.5 sm:gap-1">
+                        <span id="totalRuns" class="text-4xl sm:text-6xl font-black tabular-nums text-white leading-none score-glow">0</span>
+                        <span class="text-xl sm:text-3xl font-light text-neutral-600">/</span>
+                        <span id="wickets" class="text-xl sm:text-3xl font-bold tabular-nums text-red-400">0</span>
                     </div>
-                    <div class="text-sm text-neutral-400 font-mono font-medium">
+                    <div class="text-xs sm:text-sm text-neutral-400 font-mono font-medium">
                         <span id="overs">0.0</span> ov
                     </div>
                 </div>
@@ -92,77 +92,79 @@
                 <div class="hidden md:block w-px h-12 bg-white/10"></div>
 
                 <!-- Bowling Team -->
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3 sm:gap-4">
                     <div>
-                        <div id="bowlingTeam" class="text-lg font-bold text-neutral-400">South Africa</div>
-                        <div class="text-[11px] text-neutral-500 uppercase tracking-wider font-medium">Bowling</div>
+                        <div id="bowlingTeam" class="text-base sm:text-lg font-bold text-neutral-400">South Africa</div>
+                        <div class="text-[10px] sm:text-[11px] text-neutral-500 uppercase tracking-wider font-medium">Bowling</div>
                     </div>
-                    <div id="targetContainer" class="text-sm text-neutral-500 chase-only hidden">
-                        Target <span id="target" class="text-base font-bold text-amber-400 tabular-nums">186</span>
+                    <div id="targetContainer" class="text-xs sm:text-sm text-neutral-500 chase-only hidden">
+                        Target <span id="target" class="text-sm sm:text-base font-bold text-amber-400 tabular-nums">186</span>
                     </div>
                 </div>
             </div>
 
             <!-- Key Numbers -->
-            <div class="flex items-center justify-center gap-8 mt-6 text-center">
+            <div class="flex items-center justify-center gap-4 sm:gap-8 mt-4 sm:mt-6 text-center flex-wrap">
                 <div>
-                    <div class="text-[10px] text-neutral-600 uppercase tracking-wider font-semibold mb-1">CRR</div>
-                    <div id="crr" class="text-xl font-bold font-mono tabular-nums text-white">0.00</div>
+                    <div class="text-[9px] sm:text-[10px] text-neutral-600 uppercase tracking-wider font-semibold mb-0.5 sm:mb-1">CRR</div>
+                    <div id="crr" class="text-base sm:text-xl font-bold font-mono tabular-nums text-white">0.00</div>
                 </div>
-                <div class="w-px h-8 bg-white/5 chase-only hidden"></div>
+                <div class="w-px h-6 sm:h-8 bg-white/5 chase-only hidden"></div>
                 <div class="chase-only hidden">
-                    <div class="text-[10px] text-neutral-600 uppercase tracking-wider font-semibold mb-1">RRR</div>
-                    <div id="rrr" class="text-xl font-bold font-mono tabular-nums text-white">9.30</div>
+                    <div class="text-[9px] sm:text-[10px] text-neutral-600 uppercase tracking-wider font-semibold mb-0.5 sm:mb-1">RRR</div>
+                    <div id="rrr" class="text-base sm:text-xl font-bold font-mono tabular-nums text-white">9.30</div>
                 </div>
-                <div class="w-px h-8 bg-white/5 chase-only hidden"></div>
+                <div class="w-px h-6 sm:h-8 bg-white/5 chase-only hidden"></div>
                 <div class="chase-only hidden">
-                    <div class="text-[10px] text-neutral-600 uppercase tracking-wider font-semibold mb-1">Need</div>
-                    <div class="text-xl font-bold font-mono tabular-nums text-white"><span id="runsNeeded">186</span></div>
+                    <div class="text-[9px] sm:text-[10px] text-neutral-600 uppercase tracking-wider font-semibold mb-0.5 sm:mb-1">Need</div>
+                    <div class="text-base sm:text-xl font-bold font-mono tabular-nums text-white"><span id="runsNeeded">186</span></div>
                 </div>
-                <div class="w-px h-8 bg-white/5"></div>
+                <div class="w-px h-6 sm:h-8 bg-white/5"></div>
                 <div>
-                    <div class="text-[10px] text-neutral-600 uppercase tracking-wider font-semibold mb-1">Balls</div>
-                    <div class="text-xl font-bold font-mono tabular-nums text-white"><span id="ballsRemaining">120</span></div>
+                    <div class="text-[9px] sm:text-[10px] text-neutral-600 uppercase tracking-wider font-semibold mb-0.5 sm:mb-1">Balls</div>
+                    <div class="text-base sm:text-xl font-bold font-mono tabular-nums text-white"><span id="ballsRemaining">120</span></div>
                 </div>
-                <div class="w-px h-8 bg-white/5"></div>
+                <div class="w-px h-6 sm:h-8 bg-white/5"></div>
                 <div>
-                    <div class="text-[10px] text-neutral-600 uppercase tracking-wider font-semibold mb-1">Phase</div>
-                    <div id="matchPhase" class="text-sm font-semibold text-neutral-300">--</div>
+                    <div class="text-[9px] sm:text-[10px] text-neutral-600 uppercase tracking-wider font-semibold mb-0.5 sm:mb-1">Phase</div>
+                    <div id="matchPhase" class="text-xs sm:text-sm font-semibold text-neutral-300">--</div>
                 </div>
             </div>
         </section>
 
         <!-- Players & This Over -->
-        <section class="flex flex-col md:flex-row items-stretch gap-4 mb-8">
+        <section class="flex flex-col md:flex-row items-stretch gap-3 sm:gap-4 mb-6 sm:mb-8">
             <!-- Players -->
-            <div class="flex-1 flex items-center gap-6 px-5 py-3 rounded-lg bg-white/[0.03] border border-white/5">
-                <div class="flex-1">
-                    <div class="text-[10px] text-neutral-600 uppercase tracking-wider font-semibold">Batting</div>
-                    <div class="flex items-center gap-1.5 mt-0.5">
-                        <span id="batterName" class="text-sm font-bold text-white truncate">--</span>
-                        <span class="text-xs font-mono tabular-nums text-neutral-400"><span id="batterRuns" class="text-white font-bold">0</span>(<span id="batterBalls">0</span>)</span>
-                        <span class="text-emerald-400 text-xs">*</span>
+            <div class="flex-1 players-card px-3 sm:px-5 py-2.5 sm:py-3 rounded-lg bg-white/[0.03] border border-white/5 min-w-0">
+                <div class="players-grid">
+                    <div class="min-w-0">
+                        <div class="text-[9px] sm:text-[10px] text-neutral-600 uppercase tracking-wider font-semibold">Batting</div>
+                        <div class="flex items-center gap-1 sm:gap-1.5 mt-0.5">
+                            <span id="batterName" class="text-xs sm:text-sm font-bold text-white truncate">--</span>
+                            <span class="text-[11px] sm:text-xs font-mono tabular-nums text-neutral-400 flex-shrink-0"><span id="batterRuns" class="text-white font-bold">0</span>(<span id="batterBalls">0</span>)</span>
+                            <span class="text-emerald-400 text-xs flex-shrink-0">*</span>
+                        </div>
+                        <div class="flex items-center gap-1 sm:gap-1.5 mt-0.5">
+                            <span id="nonBatterName" class="text-xs sm:text-sm font-medium text-neutral-500 truncate">--</span>
+                            <span class="text-[11px] sm:text-xs font-mono tabular-nums text-neutral-600 flex-shrink-0"><span id="nonBatterRuns" class="text-neutral-400 font-bold">0</span>(<span id="nonBatterBalls">0</span>)</span>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-1.5 mt-0.5">
-                        <span id="nonBatterName" class="text-sm font-medium text-neutral-500 truncate">--</span>
-                        <span class="text-xs font-mono tabular-nums text-neutral-600"><span id="nonBatterRuns" class="text-neutral-400 font-bold">0</span>(<span id="nonBatterBalls">0</span>)</span>
-                    </div>
-                </div>
-                <div class="w-px h-8 bg-white/5"></div>
-                <div class="flex-1">
-                    <div class="text-[10px] text-neutral-600 uppercase tracking-wider font-semibold">Bowling</div>
-                    <div class="flex items-center gap-1.5 mt-0.5">
-                        <span id="currentBowler" class="text-sm font-bold text-white truncate">--</span>
-                        <span class="text-xs font-mono tabular-nums text-neutral-400"><span id="bowlerWickets" class="text-emerald-400 font-bold">0</span>/<span id="bowlerRuns">0</span></span>
+                    <div class="players-divider"></div>
+                    <div class="min-w-0">
+                        <div class="text-[9px] sm:text-[10px] text-neutral-600 uppercase tracking-wider font-semibold">Bowling</div>
+                        <div class="flex items-center gap-1 sm:gap-1.5 mt-0.5">
+                            <span id="currentBowler" class="text-xs sm:text-sm font-bold text-white truncate">--</span>
+                            <span class="text-[11px] sm:text-xs font-mono tabular-nums text-neutral-400 flex-shrink-0"><span id="bowlerWickets" class="text-emerald-400 font-bold">0</span>/<span id="bowlerRuns">0</span></span>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- This Over -->
-            <div class="flex items-center gap-4 px-5 py-3 rounded-lg bg-white/[0.03] border border-white/5">
-                <div>
-                    <div class="text-[10px] text-neutral-600 uppercase tracking-wider font-semibold">This Over</div>
-                    <div class="text-sm font-bold text-white mt-0.5"><span id="overRuns" class="text-emerald-400 tabular-nums">0</span> runs</div>
+            <div class="flex items-center gap-3 sm:gap-4 px-3 sm:px-5 py-2.5 sm:py-3 rounded-lg bg-white/[0.03] border border-white/5">
+                <div class="flex-shrink-0">
+                    <div class="text-[9px] sm:text-[10px] text-neutral-600 uppercase tracking-wider font-semibold">This Over</div>
+                    <div class="text-xs sm:text-sm font-bold text-white mt-0.5"><span id="overRuns" class="text-emerald-400 tabular-nums">0</span> runs</div>
                 </div>
                 <div id="ballIndicator" class="this-over-balls">
                 </div>
@@ -171,10 +173,10 @@
 
         <!-- Commentary Feed -->
         <section>
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-between mb-3 sm:mb-4">
                 <h2 class="text-xs text-neutral-500 uppercase tracking-wider font-bold">Commentary</h2>
             </div>
-            <div id="commentaryFeed" class="max-h-[calc(100vh-480px)] overflow-y-auto feed-scroll">
+            <div id="commentaryFeed" class="commentary-feed-scroll overflow-y-auto feed-scroll">
                 <div class="feed-item feed-placeholder py-20 text-center">
                     <p class="text-sm text-neutral-600">Loading commentary...</p>
                 </div>
@@ -235,7 +237,10 @@
                 <div id="timelineInningsSep" class="timeline-innings-sep"></div>
 
                 <!-- Playback cursor / thumb -->
-                <div id="timelineCursor" class="timeline-cursor"></div>
+                <div id="timelineCursor" class="timeline-cursor hidden">
+                    <div class="timeline-cursor-line"></div>
+                    <div id="timelineCursorBadge" class="timeline-cursor-badge"></div>
+                </div>
             </div>
 
             <!-- Hover tooltip -->

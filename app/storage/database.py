@@ -1199,7 +1199,7 @@ async def get_commentaries_after(
             FROM match_commentaries c
             LEFT JOIN deliveries b ON c.ball_id = b.id
             WHERE c.match_id = ? AND c.seq > ? AND (c.language = ? OR c.language IS NULL)
-            ORDER BY c.seq, c.id
+            ORDER BY b.innings,b.ball_index,c.seq, c.id
         """
         params: tuple = (match_id, after_seq, language)
     else:

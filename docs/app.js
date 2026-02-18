@@ -25,6 +25,9 @@ let totalBalls = 0;
 let recentOversData = [];
 let currentInnings = 1;
 
+// Per-innings team info derived from match data
+let inningsTeamInfo = {};           // { 1: { batting_team, bowling_team }, 2: { ... } }
+
 // Timeline state — derived entirely from allCommentaries
 let inningsSummary = [];            // From match.match_info.innings_summary
 let timelineItems = [];             // Filtered from allCommentaries (excludes end_of_over)
@@ -54,6 +57,7 @@ const tlFilled = document.getElementById('timelineFilled');
 const tlBadges = document.getElementById('timelineBadges');
 const tlInningsSep = document.getElementById('timelineInningsSep');
 const tlCursor = document.getElementById('timelineCursor');
+const tlCursorBadge = document.getElementById('timelineCursorBadge');
 const tlTooltip = document.getElementById('timelineTooltip');
 const tlTooltipOver = document.getElementById('tooltipOver');
 const tlTooltipPlayers = document.getElementById('tooltipPlayers');
@@ -301,10 +305,34 @@ async function openMatch(matchId) {
         const matchInfo = match.match_info || {};
         inningsSummary = matchInfo.innings_summary || [];
 
+        // Build per-innings team lookup from match data
+        inningsTeamInfo = {};
+        for (const inn of inningsSummary) {
+            inningsTeamInfo[inn.innings_number] = {
+                batting_team: inn.batting_team,
+                bowling_team: inn.bowling_team,
+                target: inn.target,
+            };
+        }
+        if (matchInfo.first_innings) {
+            inningsTeamInfo[1] = inningsTeamInfo[1] || {};
+            inningsTeamInfo[1].batting_team = inningsTeamInfo[1].batting_team || matchInfo.first_innings.batting_team;
+            inningsTeamInfo[1].bowling_team = inningsTeamInfo[1].bowling_team || matchInfo.first_innings.bowling_team;
+        }
+        if (matchInfo.second_innings) {
+            inningsTeamInfo[2] = inningsTeamInfo[2] || {};
+            inningsTeamInfo[2].batting_team = inningsTeamInfo[2].batting_team || matchInfo.second_innings.batting_team;
+            inningsTeamInfo[2].bowling_team = inningsTeamInfo[2].bowling_team || matchInfo.second_innings.bowling_team;
+            inningsTeamInfo[2].target = inningsTeamInfo[2].target || matchInfo.target;
+        }
+        if (!inningsTeamInfo[1]) {
+            inningsTeamInfo[1] = { batting_team: matchInfo.team1 || match.team1, bowling_team: matchInfo.team2 || match.team2 };
+        }
+
         // Populate language dropdown from match languages
         applyMatchLanguages(match.languages || ['hi']);
 
-        // Set match info in scoreboard
+        // Set match info in scoreboard (shows current/latest state)
         if (matchInfo.batting_team) els.battingTeam.textContent = matchInfo.batting_team;
         if (matchInfo.bowling_team) els.bowlingTeam.textContent = matchInfo.bowling_team;
         if (matchInfo.target) els.target.textContent = matchInfo.target;
@@ -521,6 +549,9 @@ function resumePlayback() {
     if (playbackIndex < 0 || playbackIndex >= allCommentaries.length) {
         playbackIndex = 0;
     }
+    if (playbackIndex === 0) {
+        resetScoreboard();
+    }
     playCurrentCommentary();
 }
 
@@ -538,6 +569,7 @@ function playFrom(idx) {
     clearPlaybackTimer();
     stopAllAudioPlayback();
     playbackIndex = idx;
+    if (idx === 0) resetScoreboard();
     isPlaying = true;
     playBtn.textContent = 'Pause';
     updateTimelinePlayBtn();
@@ -571,12 +603,26 @@ function playCurrentCommentary() {
     scrollToPlayingItem(playbackIndex);
     updateTimelineCursor();
 
-    // Update innings display from narrative events
-    if (c.event_type === 'first_innings_start') updateChaseDisplay(1);
-    else if (c.event_type === 'second_innings_start') updateChaseDisplay(2);
+    // Determine current innings from this commentary and apply team names
+    const innNum = (c.ball_info && c.ball_info.innings)
+        || (c.data && c.data.innings)
+        || (c.event_type === 'second_innings_start' ? 2
+            : c.event_type === 'second_innings_end' ? 2 : null);
+    if (innNum != null) {
+        const teams = inningsTeamInfo[innNum] || {};
+        if (teams.batting_team) els.battingTeam.textContent = teams.batting_team;
+        if (teams.bowling_team) els.bowlingTeam.textContent = teams.bowling_team;
+        if (innNum >= 2 && teams.target) els.target.textContent = teams.target;
+        updateChaseDisplay(innNum);
+    } else if (c.event_type === 'first_innings_start') {
+        const teams = inningsTeamInfo[1] || {};
+        if (teams.batting_team) els.battingTeam.textContent = teams.batting_team;
+        if (teams.bowling_team) els.bowlingTeam.textContent = teams.bowling_team;
+        updateChaseDisplay(1);
+    }
 
-    // Sync scoreboard to this commentary's ball_info
-    if (c.ball_info) {
+    // Sync scoreboard to this commentary's ball_info (only for delivery events)
+    if (c.event_type === 'delivery' && c.ball_info) {
         const tlIdx = commIdxToTimelineIdx[playbackIndex];
         if (tlIdx !== undefined) {
             applyScoreboardSnapshot(c.ball_info);
@@ -654,6 +700,44 @@ function updateChaseDisplay(innings) {
 }
 
 // === Scoreboard ===
+function resetScoreboard() {
+    // Restore first innings team names from match data
+    const firstInn = inningsTeamInfo[1] || {};
+    els.battingTeam.textContent = firstInn.batting_team || '--';
+    els.bowlingTeam.textContent = firstInn.bowling_team || '--';
+
+    els.totalRuns.textContent = '0';
+    els.wickets.textContent = '0';
+    els.overs.textContent = '0.0';
+    els.crr.textContent = '0.00';
+    els.rrr.textContent = '0.00';
+    els.runsNeeded.textContent = '0';
+    els.ballsRemaining.textContent = '120';
+    els.matchPhase.textContent = 'Powerplay';
+    els.batterName.textContent = '--';
+    els.nonBatterName.textContent = '--';
+    els.batterRuns.textContent = '0';
+    els.batterBalls.textContent = '0';
+    els.nonBatterRuns.textContent = '0';
+    els.nonBatterBalls.textContent = '0';
+    els.currentBowler.textContent = '--';
+    els.bowlerRuns.textContent = '0';
+    els.bowlerWickets.textContent = '0';
+    els.target.textContent = '';
+    currentOverBalls = [];
+    currentOverRuns = 0;
+    totalBoundaries = { fours: 0, sixes: 0 };
+    totalExtras = 0;
+    totalDotBalls = 0;
+    totalBalls = 0;
+    recentOversData = [];
+    els.overRuns.textContent = '0';
+    updateStats();
+    renderRecentOvers();
+    renderBallIndicator();
+    updateChaseDisplay(1);
+}
+
 function updateScoreboard(d) {
     if (d.innings != null) updateChaseDisplay(d.innings);
     if (d.total_runs != null) els.totalRuns.textContent = d.total_runs;
@@ -1134,7 +1218,6 @@ function getTimelineBadgeLabel(item) {
     const b = item.ball_info || item.data || {};
     if (b.is_wicket) return { badge: 'badge-wicket', text: 'W', title: 'Wicket' };
     if (b.is_six) return { badge: 'badge-six', text: '6', title: 'Six' };
-    if (b.is_boundary) return { badge: 'badge-four', text: '4', title: 'Four' };
     const et = (b.extras_type || '').toLowerCase();
     const runs = (b.runs || 0) + (b.extras || 0);
     if (et === 'wide' || et === 'wides') return { badge: 'badge-wide', text: String(runs), title: 'Wide' };
@@ -1197,6 +1280,29 @@ function updateTimelineFilled() {
 
 // === Timeline: Cursor ===
 
+function getCursorBadgeInfo(item) {
+    if (!item) return { cls: '', text: '' };
+    if (item.type === 'event') return { cls: 'cursor-badge-event', text: '' };
+
+    const b = item.ball_info || item.data || {};
+    if (b.is_wicket) return { cls: 'cursor-badge-wicket', text: 'W' };
+    if (b.is_six) return { cls: 'cursor-badge-six', text: '6' };
+    if (b.is_boundary) return { cls: 'cursor-badge-four', text: '4' };
+    const et = (b.extras_type || '').toLowerCase();
+    const runs = (b.runs || 0) + (b.extras || 0);
+    if (et === 'wide' || et === 'wides' || et === 'noball' || et === 'no_ball') {
+        return { cls: 'cursor-badge-extra', text: String(runs) };
+    }
+    if (runs === 0) return { cls: 'cursor-badge-dot', text: '0' };
+    return { cls: 'cursor-badge-runs', text: String(runs) };
+}
+
+function updateCursorBadge(item) {
+    const { cls, text } = getCursorBadgeInfo(item);
+    tlCursorBadge.className = 'timeline-cursor-badge ' + cls;
+    tlCursorBadge.textContent = text;
+}
+
 function getTimelinePositionFromPlayback() {
     if (playbackIndex < 0) return -1;
     if (commIdxToTimelineIdx[playbackIndex] !== undefined) {
@@ -1224,14 +1330,13 @@ function updateTimelineCursor() {
         return;
     }
 
+    tlCursor.classList.remove('hidden');
+    tlCursor.style.left = `${(pos / (total - 1)) * 100}%`;
+
     const activeBadge = tlBadges.querySelector(`.timeline-badge[data-timeline-idx="${pos}"]`);
-    if (activeBadge) {
-        activeBadge.classList.add('active');
-        tlCursor.classList.add('hidden');
-    } else {
-        tlCursor.classList.remove('hidden');
-        tlCursor.style.left = `${(pos / (total - 1)) * 100}%`;
-    }
+    if (activeBadge) activeBadge.classList.add('active');
+
+    updateCursorBadge(timelineItems[pos]);
 }
 
 function updateTimelinePlayBtn() {
@@ -1339,6 +1444,7 @@ function scrubToPosition(e, shouldPlay = false) {
     const pct = (total > 1 ? (idx / (total - 1)) * 100 : 0);
     tlCursor.classList.remove('hidden');
     tlCursor.style.left = `${pct}%`;
+    updateCursorBadge(item);
 
     // Update scoreboard for ball items
     if (item.type === 'ball' && item.ball_info) {
@@ -1401,6 +1507,7 @@ function onTrackMouseMove(e) {
     const pct = total > 1 ? (idx / (total - 1)) * 100 : 0;
     tlCursor.classList.remove('hidden');
     tlCursor.style.left = `${pct}%`;
+    updateCursorBadge(item);
 
     tlBadges.querySelectorAll('.timeline-badge.hover').forEach(el => el.classList.remove('hover'));
     const hoverBadge = tlBadges.querySelector(`.timeline-badge[data-timeline-idx="${idx}"]`);

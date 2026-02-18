@@ -17,17 +17,26 @@
 
 /* Ball dots */
 .ball-dot {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
+    width: 24px;
+    height: 24px;
+    border-radius: 5px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 700;
     font-family: 'JetBrains Mono', monospace;
     transition: all 0.2s ease;
     flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+    .ball-dot {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        font-size: 0.7rem;
+    }
 }
 
 .ball-dot.runs-0 { background: rgba(255,255,255,0.04); color: #525252; }
@@ -40,25 +49,62 @@
 .ball-dot.extra  { background: rgba(251,146,60,0.12); color: #fb923c; }
 .ball-dot.ball-placeholder { background: rgba(255,255,255,0.04); color: transparent; border: 1px dashed rgba(255,255,255,0.08); }
 
+/* Players card — responsive grid: row on mobile, side-by-side on sm+ */
+.players-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+.players-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.05);
+}
+
+@media (min-width: 480px) {
+    .players-grid {
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 16px;
+    }
+    .players-divider {
+        width: 1px;
+        height: 32px;
+    }
+}
+
+@media (min-width: 640px) {
+    .players-grid { gap: 24px; }
+}
+
 /* This Over: fixed width, 6 balls + extras row; height fits 2 rows so no layout shift */
 .this-over-balls {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 6px;
-    width: 210px;
-    min-height: 68px;
-    flex-shrink: 0;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+    min-height: 32px;
 }
 .this-over-row {
     display: flex;
-    gap: 6px;
+    gap: 4px;
     flex-wrap: nowrap;
-    justify-content: left;
 }
-.this-over-row:not(.this-over-extras) .ball-dot { flex: 1; min-width: 0; aspect-ratio: 1; width: auto; height: auto; }
 .this-over-extras { flex-wrap: wrap; }
-.this-over-extras .ball-dot { flex: 0 0 28px; width: 28px; height: 28px; }
+.this-over-extras .ball-dot { flex: 0 0 24px; width: 24px; height: 24px; }
+
+@media (min-width: 640px) {
+    .this-over-balls {
+        gap: 6px;
+        flex: none;
+        width: 210px;
+        min-height: 68px;
+    }
+    .this-over-row { gap: 6px; }
+    .this-over-row:not(.this-over-extras) .ball-dot { flex: 1; min-width: 0; aspect-ratio: 1; width: auto; height: auto; }
+    .this-over-extras .ball-dot { flex: 0 0 28px; width: 28px; height: 28px; }
+}
 
 /* Commentary feed items */
 .feed-item {
@@ -91,22 +137,34 @@
 
 /* Left column: ball info */
 .feed-ball-col {
-    width: 64px;
+    width: 48px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    padding: 14px 0 14px 0;
-    gap: 6px;
+    padding: 10px 0;
+    gap: 4px;
+}
+
+@media (min-width: 640px) {
+    .feed-ball-col {
+        width: 64px;
+        padding: 14px 0;
+        gap: 6px;
+    }
 }
 
 .feed-ball-over {
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     font-weight: 700;
     color: #525252;
     font-family: 'JetBrains Mono', monospace;
     letter-spacing: -0.02em;
+}
+
+@media (min-width: 640px) {
+    .feed-ball-over { font-size: 0.75rem; }
 }
 
 .feed-ball-indicator-wrap {
@@ -140,16 +198,24 @@
 }
 
 .feed-ball-indicator {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 800;
     font-family: 'JetBrains Mono', monospace;
     flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+    .feed-ball-indicator {
+        width: 32px;
+        height: 32px;
+        font-size: 0.7rem;
+    }
 }
 
 /* Ball indicator colors */
@@ -167,8 +233,12 @@
 .feed-content-col {
     flex: 1;
     min-width: 0;
-    padding: 14px 16px 14px 0;
+    padding: 10px 10px 10px 0;
     border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+@media (min-width: 640px) {
+    .feed-content-col { padding: 14px 16px 14px 0; }
 }
 
 .feed-item:first-child .feed-content-col {
@@ -199,9 +269,16 @@
 }
 
 .feed-item .feed-text {
-    font-size: 0.9rem;
-    line-height: 1.6;
+    font-size: 0.8rem;
+    line-height: 1.55;
     color: #d4d4d4;
+}
+
+@media (min-width: 640px) {
+    .feed-item .feed-text {
+        font-size: 0.9rem;
+        line-height: 1.6;
+    }
 }
 
 .feed-item .feed-score {
@@ -241,14 +318,22 @@
 
 /* Narrative left column icon */
 .feed-narrative-icon {
-    width: 36px;
-    height: 36px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+    .feed-narrative-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 0.85rem;
+    }
 }
 
 .narrative-icon-first_innings_start,
@@ -362,9 +447,19 @@
     margin-top: 0;
 }
 
+/* Commentary feed scroll height */
+.commentary-feed-scroll {
+    max-height: calc(100vh - 480px);
+}
+
 @media (max-width: 768px) {
-    .match-end-card { padding: 32px; }
-    .match-end-card h2 { font-size: 1.5rem; }
+    .match-end-card { padding: 24px 20px; }
+    .match-end-card h2 { font-size: 1.25rem; }
+    .match-end-card p { font-size: 0.875rem; }
+    .commentary-feed-scroll {
+        max-height: none;
+        overflow-y: visible;
+    }
 }
 
 
@@ -472,7 +567,7 @@
     top: -4px;
     left: 0;
     right: 0;
-    height: 32px;
+    height: 36px;
     pointer-events: auto;
     z-index: 10;
 }
@@ -498,8 +593,8 @@
 .timeline-badge.badge-wide,
 .timeline-badge.badge-noball {
     top: 8px;  /* track center: badges top=-4, track 0-8 → center at 8px */
-    width: 4px;
-    height: 4px;
+    width: 2px;
+    height: 2px;
     background: rgba(255,255,255,0.5);
     font-size: 0;
     box-shadow: none;
@@ -507,18 +602,16 @@
     color: #0a0a0a;
 }
 
-/* Highlights below the progress bar — 4, 6, W, event badges */
+/* Highlights below the progress bar — 6, W, event badges */
 .timeline-badge.badge-wicket,
 .timeline-badge.badge-six,
-.timeline-badge.badge-four,
 .timeline-badge.badge-event {
-    top: 12px;
-    width: 12px;
-    height: 12px;
+    top: 19px;
+    width: 14px;
+    height: 14px;
 }
 .timeline-badge.badge-wicket   { background: rgba(239,68,68,0.9); color: #fff; box-shadow: 0 0 6px rgba(248,113,113,0.5); z-index: 10; }
 .timeline-badge.badge-six      { background: rgba(139,92,246,0.9); color: #fff; box-shadow: 0 0 4px rgba(167,139,250,0.3); }
-.timeline-badge.badge-four     { background: rgba(16,185,129,0.9); color: #fff; box-shadow: 0 0 4px rgba(52,211,153,0.3); }
 
 .timeline-badge.hover {
     transform: translate(-50%, -50%) scale(1.5);
@@ -526,14 +619,14 @@
     z-index: 9999;
 }
 
-/* Dot badges expand on hover / active — stay on track */
+/* Dot badges expand on hover / active — align with cursor badge */
 .timeline-badge.hover.badge-dot,
 .timeline-badge.hover.badge-wide,
 .timeline-badge.hover.badge-noball,
 .timeline-badge.active.badge-dot,
 .timeline-badge.active.badge-wide,
 .timeline-badge.active.badge-noball {
-    width: 12px; height: 12px; font-size: 0.65rem; top: 12px; }
+    width: 14px; height: 14px; font-size: 0.65rem; top: 19px; }
 
 /* Per-type colours — hover */
 .timeline-badge.hover.badge-dot    { background: rgba(255,255,255,0.9); box-shadow: 0 0 6px rgba(255,255,255,0.4); }
@@ -546,16 +639,13 @@
 .timeline-badge.active.badge-noball { background: rgba(249,115,22,0.9); color: #fff; box-shadow: 0 0 8px rgba(251,146,60,0.5); }
 
 .timeline-badge.hover.active {
-    transform: translate(-50%, -50%) scale(1);
-    width: 12px;
-    height: 12px;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .timeline-badge.active {
-    /* transform: translate(-50%, -50%) scale(1); */
-    opacity: 1;
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5), 0 0 0 1px #fff;
-    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
 }
 
 /* Event badges — same row as 4/6/W, below track */
@@ -575,19 +665,19 @@
     opacity: 1;
 }
 
-/* Innings separator — rendered as a dot like wicket/six badges */
+/* Innings separator — rendered as a dot aligned with badges */
 .timeline-innings-sep {
     position: absolute;
     top: -4px;
     left: 0;
     right: 0;
-    height: 16px;
+    height: 32px;
     pointer-events: none;
 }
 
 .timeline-innings-sep-dot {
     position: absolute;
-    top: 50%;
+    top: 19px;
     width: 8px;
     height: 8px;
     border-radius: 50%;
@@ -596,26 +686,55 @@
     transform: translate(-50%, -50%);
 }
 
-/* Playback cursor / thumb */
+/* Playback cursor / thumb — line + badge */
 .timeline-cursor {
     position: absolute;
     top: -6px;
     left: 0;
-    width: 3px;
-    height: 20px;
-    margin-left: -1.5px;
-    border-radius: 2px;
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.3);
-    box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
-    transition: left 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: translateX(-50%);
     pointer-events: none;
-    z-index: 5;
+    z-index: 15;
+    transition: left 0.2s ease;
 }
 
 .timeline-cursor.hidden {
     display: none;
 }
+
+.timeline-cursor-line {
+    width: 2px;
+    height: 10px;
+    background: #fff;
+    border-radius: 1px;
+    box-shadow: 0 0 6px rgba(255,255,255,0.5);
+}
+
+.timeline-cursor-badge {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+    margin-top: 1px;
+    border: 2px solid rgba(255,255,255,0.85);
+    box-shadow: 0 0 8px rgba(0,0,0,0.4);
+}
+
+.cursor-badge-wicket { background: rgba(239,68,68,0.95); color: #fff; }
+.cursor-badge-six    { background: rgba(139,92,246,0.95); color: #fff; }
+.cursor-badge-four   { background: rgba(16,185,129,0.95); color: #fff; }
+.cursor-badge-dot    { background: rgba(38,38,38,0.95); color: #737373; }
+.cursor-badge-runs   { background: rgba(59,130,246,0.95); color: #fff; }
+.cursor-badge-extra  { background: rgba(251,146,60,0.95); color: #fff; }
+.cursor-badge-event  { background: rgba(56,189,248,0.9); color: #fff; font-size: 0; }
 
 /* Hover tooltip — highest z-index so it appears above badges/cursor */
 .timeline-tooltip {
@@ -771,16 +890,12 @@
     display: none;
 }
 
-/* Dragging state */
+/* Instant cursor positioning during hover / drag */
 .timeline-track-container:hover .timeline-cursor {
-    width: 4px;
-    margin-left: -2px;
+    transition: none;
 }
 .timeline-track-container.dragging .timeline-cursor {
     transition: none;
-    width: 4px;
-    margin-left: -2px;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
 }
 
 /* Expand track hit area on hover for easier clicking */
@@ -795,15 +910,48 @@
 
 @media (max-width: 768px) {
     .timeline-bar {
-        height: 52px;
-        padding: 0 10px;
-        gap: 8px;
+        height: 48px;
+        padding: 0 8px;
+        gap: 6px;
+        overflow: hidden;
     }
     .timeline-play-btn {
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 30px;
+    }
+    .timeline-play-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+    .timeline-lang-select {
+        height: 30px;
+        padding: 0 18px 0 8px;
+        font-size: 0.6rem;
+        background-position: right 6px center;
     }
     .timeline-right-controls {
         gap: 4px;
     }
+    .timeline-live-badge {
+        font-size: 0.55rem;
+        padding: 2px 6px;
+    }
+    .timeline-go-live {
+        font-size: 0.6rem;
+        padding: 3px 8px;
+    }
+    .timeline-tooltip {
+        padding: 6px 10px;
+        border-radius: 6px;
+    }
+    .timeline-tooltip-over { font-size: 0.65rem; }
+    .timeline-tooltip-players { font-size: 0.6rem; }
+    .timeline-tooltip-event { font-size: 0.6rem; }
+}
+
+@media (max-width: 480px) {
+    .timeline-bar { gap: 4px; }
+    .feed-item .feed-over { font-size: 0.6rem; }
+    .feed-item .feed-badge { font-size: 0.55rem; padding: 1px 6px; }
+    .feed-item .feed-score { font-size: 0.7rem; }
 }
