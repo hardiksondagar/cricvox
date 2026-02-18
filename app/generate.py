@@ -76,6 +76,14 @@ async def _generate_one_lang(
             skeleton_id, text, extra_data, language, clear_audio=include_generated
         )
     else:
+        # Guard against duplicates: if a generated row already exists, skip the insert.
+        # This prevents re-runs (without force_regenerate) from creating duplicate rows.
+        if not include_generated:
+            existing_id = await get_skeleton_to_update(
+                match_id, ball_id, event_type, language, include_generated=True
+            )
+            if existing_id:
+                return strip_audio_tags(text)
         await insert_commentary(
             match_id=match_id,
             ball_id=ball_id,

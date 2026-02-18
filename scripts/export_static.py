@@ -143,8 +143,8 @@ async def export_matches(base_path: str) -> None:
     html = html.replace("</head>", inject + "</head>")
 
     # Fix asset paths for static mode (same directory)
-    html = html.replace('href="/static/style.css"', 'href="style.css"')
-    html = html.replace('src="/static/app.js"', 'src="app.js"')
+    html = html.replace("'/static/style.css?v='", "'style.css?v='")
+    html = html.replace("'/static/app.js?v='", "'app.js?v='")
 
     index_dst.write_text(html, encoding="utf-8")
     print("Copied index.html, app.js, style.css")

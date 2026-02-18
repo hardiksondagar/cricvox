@@ -68,6 +68,14 @@ const tlPlayIcon = document.getElementById('timelinePlayIcon');
 const tlPauseIcon = document.getElementById('timelinePauseIcon');
 const tlInningsLabels = document.getElementById('timelineInningsLabels');
 
+// Match info strip DOM refs
+const matchInfoStrip = document.getElementById('matchInfoStrip');
+const matchSeriesEl = document.getElementById('matchSeries');
+const matchDescEl = document.getElementById('matchDesc');
+const matchDescSep = document.getElementById('matchDescSep');
+const matchVenueEl = document.getElementById('matchVenue');
+const matchVenueSep = document.getElementById('matchVenueSep');
+
 const els = {
     battingTeam: document.getElementById('battingTeam'),
     bowlingTeam: document.getElementById('bowlingTeam'),
@@ -328,6 +336,9 @@ async function openMatch(matchId) {
         if (!inningsTeamInfo[1]) {
             inningsTeamInfo[1] = { batting_team: matchInfo.team1 || match.team1, bowling_team: matchInfo.team2 || match.team2 };
         }
+
+        // Populate match info strip (series, match type, venue)
+        applyMatchInfoStrip(match);
 
         // Populate language dropdown from match languages
         applyMatchLanguages(match.languages || ['hi']);
@@ -1671,6 +1682,54 @@ function showMatchEnd(d) {
         </div>
     `;
     document.body.appendChild(overlay);
+}
+
+
+// === Match Info Strip ===
+
+/**
+ * Populate the match info strip (series, match descriptor, venue) from match data.
+ * Derives the match descriptor (e.g. "Final", "27th Match, Group A") from
+ * the title by stripping out the team names and series name.
+ */
+function applyMatchInfoStrip(match) {
+    const info = match.match_info || {};
+    const series = info.series || '';
+    const venue = match.venue || info.venue || '';
+    const title = info.title || match.title || '';
+
+    // Derive match descriptor by removing "Team1 vs Team2, " prefix and ", Series" suffix
+    let desc = '';
+    if (title) {
+        let remainder = title;
+        const vsIdx = remainder.search(/\s+vs?\s+/i);
+        if (vsIdx >= 0) {
+            const afterVs = remainder.substring(vsIdx).search(/,\s*/);
+            if (afterVs >= 0) {
+                remainder = remainder.substring(vsIdx + afterVs).replace(/^,\s*/, '');
+            }
+        }
+        if (series && remainder.endsWith(series)) {
+            remainder = remainder.substring(0, remainder.length - series.length).replace(/,\s*$/, '');
+        }
+        if (remainder && remainder !== title) {
+            desc = remainder.trim();
+        }
+    }
+
+    matchSeriesEl.textContent = series;
+    matchDescEl.textContent = desc;
+    matchVenueEl.textContent = venue;
+
+    // Show/hide separators based on content
+    const hasDesc = !!desc;
+    const hasVenue = !!venue;
+    matchDescSep.classList.toggle('hidden', !series || !hasDesc);
+    matchDescEl.classList.toggle('hidden', !hasDesc);
+    matchVenueSep.classList.toggle('hidden', !hasDesc && !series || !hasVenue);
+    matchVenueEl.classList.toggle('hidden', !hasVenue);
+
+    matchInfoStrip.classList.toggle('hidden', !series && !hasDesc && !hasVenue);
 }
 
 
