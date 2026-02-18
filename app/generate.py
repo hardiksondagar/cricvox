@@ -838,12 +838,15 @@ async def generate_overs_commentary(
 #  Audio generation (separate from text)
 # ================================================================== #
 
-async def generate_commentary_audio(commentary_id: int) -> dict:
+async def generate_commentary_audio(commentary_id: int, regenerate: bool = False) -> dict:
     """
     Generate TTS audio for a single commentary row.
 
     Reads the commentary from DB, generates audio via TTS, saves the file,
     and updates the DB row with the audio_url.
+
+    When regenerate=True, re-generates audio even if audio_url already exists.
+    The old URL is only replaced once the new file is saved (no null gap).
 
     Returns a dict with commentary_id, audio_url (or None on failure),
     and status ("generated", "skipped", or "failed").
@@ -852,7 +855,7 @@ async def generate_commentary_audio(commentary_id: int) -> dict:
     if not row:
         return {"commentary_id": commentary_id, "status": "not_found", "audio_url": None}
 
-    if row["audio_url"]:
+    if row["audio_url"] and not regenerate:
         return {"commentary_id": commentary_id, "status": "already_exists", "audio_url": row["audio_url"]}
 
     if not row["text"] or not row["language"]:
@@ -882,13 +885,15 @@ async def generate_commentary_audio(commentary_id: int) -> dict:
 async def generate_match_audio(
     match_id: int,
     language: str | None = None,
+    regenerate: bool = False,
 ) -> dict:
     """
     Generate TTS audio for all commentaries in a match that don't have audio yet.
 
     Args:
-        match_id:  Integer match ID.
-        language:  Optional language filter. If None, processes all languages.
+        match_id:    Integer match ID.
+        language:    Optional language filter. If None, processes all languages.
+        regenerate:  If True, re-generate audio even for rows that already have it.
 
     Returns a summary dict with total, generated, skipped, failed counts.
     """
@@ -896,7 +901,9 @@ async def generate_match_audio(
     if not match:
         return {"match_id": match_id, "error": "Match not found"}
 
-    pending = await get_commentaries_pending_audio(match_id, language=language)
+    pending = await get_commentaries_pending_audio(
+        match_id, language=language, include_existing=regenerate
+    )
 
     if not pending:
         return {
@@ -915,18 +922,13 @@ async def generate_match_audio(
         f"{f' (language={language})' if language else ''}"
     )
 
-    generated = 0
-    failed = 0
-    skipped = 0
+    results = await asyncio.gather(
+        *(generate_commentary_audio(row["id"], regenerate=regenerate) for row in pending)
+    )
 
-    for row in pending:
-        result = await generate_commentary_audio(row["id"])
-        if result["status"] == "generated":
-            generated += 1
-        elif result["status"] == "failed":
-            failed += 1
-        else:
-            skipped += 1
+    generated = sum(1 for r in results if r["status"] == "generated")
+    failed = sum(1 for r in results if r["status"] == "failed")
+    skipped = len(results) - generated - failed
 
     logger.info(
         f"Audio generation complete for match {match_id}: "
@@ -948,17 +950,20 @@ async def generate_overs_audio(
     innings: int,
     overs_0indexed: list[int],
     language: str | None = None,
+    regenerate: bool = False,
 ) -> dict:
     """
     Generate TTS audio for commentaries belonging to deliveries in specific overs.
 
-    Only processes commentaries that have text but no audio yet.
+    Only processes commentaries that have text but no audio yet,
+    unless regenerate=True which re-generates all.
 
     Args:
         match_id:       Integer match ID.
         innings:        Innings number (1 or 2).
         overs_0indexed: List of 0-indexed over numbers.
         language:       Optional language filter.
+        regenerate:     If True, re-generate audio even for rows that already have it.
 
     Returns summary dict with total, generated, skipped, failed counts.
     """
@@ -975,7 +980,7 @@ async def generate_overs_audio(
 
     ball_ids = [d["id"] for d in deliveries]
     pending = await get_commentaries_pending_audio_by_ball_ids(
-        match_id, ball_ids, language=language
+        match_id, ball_ids, language=language, include_existing=regenerate
     )
 
     if not pending:
@@ -994,18 +999,13 @@ async def generate_overs_audio(
         f"in overs {[o + 1 for o in overs_0indexed]} (match {match_id})"
     )
 
-    generated = 0
-    failed = 0
-    skipped = 0
+    results = await asyncio.gather(
+        *(generate_commentary_audio(row["id"], regenerate=regenerate) for row in pending)
+    )
 
-    for row in pending:
-        result = await generate_commentary_audio(row["id"])
-        if result["status"] == "generated":
-            generated += 1
-        elif result["status"] == "failed":
-            failed += 1
-        else:
-            skipped += 1
+    generated = sum(1 for r in results if r["status"] == "generated")
+    failed = sum(1 for r in results if r["status"] == "failed")
+    skipped = len(results) - generated - failed
 
     logger.info(
         f"Overs audio complete for match {match_id}: "
@@ -1025,13 +1025,16 @@ async def generate_overs_audio(
 async def generate_ball_audio(
     match_id: int,
     ball_id: int,
+    regenerate: bool = False,
 ) -> dict:
     """
     Generate TTS audio for all pending commentaries of a specific delivery.
 
     Returns summary dict with ball_id, total, generated, failed counts.
     """
-    pending = await get_commentaries_pending_audio_by_ball_ids(match_id, [ball_id])
+    pending = await get_commentaries_pending_audio_by_ball_ids(
+        match_id, [ball_id], include_existing=regenerate
+    )
 
     if not pending:
         return {
@@ -1042,15 +1045,12 @@ async def generate_ball_audio(
             "message": "No commentaries pending audio for this delivery",
         }
 
-    generated = 0
-    failed = 0
+    results = await asyncio.gather(
+        *(generate_commentary_audio(row["id"], regenerate=regenerate) for row in pending)
+    )
 
-    for row in pending:
-        result = await generate_commentary_audio(row["id"])
-        if result["status"] == "generated":
-            generated += 1
-        else:
-            failed += 1
+    generated = sum(1 for r in results if r["status"] == "generated")
+    failed = len(results) - generated
 
     return {
         "ball_id": ball_id,

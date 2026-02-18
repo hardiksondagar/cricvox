@@ -64,7 +64,7 @@ data/
   languages.json       — Language configs (code, name, tts_vendor, voice_id, etc.)
   matches.db           — SQLite database (gitignored)
   sample/
-    ind_vs_sa_final.json — T20 World Cup 2024 Final ball-by-ball data
+    match_1/match_1.json — Sample match ball-by-ball data
 tests/
   conftest.py          — Shared fixtures (per-test SQLite, AsyncClient, seed data)
   test_database.py     — 14 database CRUD unit tests

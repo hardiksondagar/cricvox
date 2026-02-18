@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     # Options: default, hype_man, storyteller, analyst, entertainer, freestyle
     commentator_personality: str = "default"
 
+    # Max concurrent TTS API calls (shared semaphore across all callers)
+    tts_max_concurrent: int = 5
+
     # Legacy fallbacks — only used if languages.json voice_id is empty
     elevenlabs_voice_id: str = "wo6udizrrtpIxWGp2qJk"
     sarvam_speaker: str = "shubh"

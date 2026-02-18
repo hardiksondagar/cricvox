@@ -14,7 +14,7 @@ from app.storage import database as db
 from app.engine.precompute import precompute_match_context
 from scripts.load_match import build_match_info, extract_players
 
-MATCH_JSON = Path(__file__).resolve().parent.parent / "data" / "sample" / "ind_vs_sa_final.json"
+MATCH_JSON = Path(__file__).resolve().parent.parent / "data" / "sample" / "match_1" / "match_1.json"
 
 
 @pytest.fixture

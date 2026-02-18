@@ -17,47 +17,68 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
 
-from app.models import SUPPORTED_LANGUAGES
-from app.commentary.prompts import strip_audio_tags
-from app.storage.database import (
-    init_db, close_db,
-    # Matches
-    create_match, get_match, list_matches, update_match, delete_match,
-    # Deliveries
-    insert_delivery, insert_deliveries_bulk, get_deliveries, get_all_deliveries,
-    get_delivery_by_id, row_to_delivery_event, get_max_seq,
-    # Commentaries
-    get_commentaries_after, get_commentary_by_id,
-    get_commentaries_pending_audio, delete_commentaries,
-    insert_commentary,
-    # Innings stats
-    get_innings_batters, get_innings_bowlers, get_fall_of_wickets,
-    # Innings & partnerships
-    get_innings, get_partnerships, upsert_innings,
-    # Match players
-    upsert_match_players_bulk, get_match_players, delete_match_players,
-)
-from app.generate import (
-    generate_match, generate_ball_commentary,
-    generate_match_audio, generate_commentary_audio,
-    generate_overs_commentary, generate_overs_audio,
-    generate_ball_audio,
-)
-from app.engine.precompute import precompute_match_context, precompute_ball_context
-from app.engine.state_manager import StateManager
 from app.commentary.precomputed_text import (
     precomputed_delivery_text,
-    precomputed_first_innings_start_text,
-    precomputed_first_innings_end_text,
-    precomputed_second_innings_start_text,
     precomputed_end_of_over_text,
+    precomputed_first_innings_end_text,
+    precomputed_first_innings_start_text,
     precomputed_phase_change_text,
     precomputed_second_innings_end_text,
+    precomputed_second_innings_start_text,
+)
+from app.commentary.prompts import strip_audio_tags
+from app.engine.precompute import precompute_ball_context, precompute_match_context
+from app.engine.state_manager import StateManager
+from app.generate import (
+    generate_ball_audio,
+    generate_ball_commentary,
+    generate_commentary_audio,
+    generate_match,
+    generate_match_audio,
+    generate_overs_audio,
+    generate_overs_commentary,
+)
+from app.models import SUPPORTED_LANGUAGES
+from app.storage.database import (
+    close_db,
+    # Matches
+    create_match,
+    delete_commentaries,
+    delete_match,
+    delete_match_players,
+    get_all_deliveries,
+    # Commentaries
+    get_commentaries_after,
+    get_commentaries_pending_audio,
+    get_commentary_by_id,
+    get_deliveries,
+    get_delivery_by_id,
+    get_fall_of_wickets,
+    # Innings & partnerships
+    get_innings,
+    # Innings stats
+    get_innings_batters,
+    get_innings_bowlers,
+    get_match,
+    get_match_players,
+    get_max_seq,
+    get_partnerships,
+    init_db,
+    insert_commentary,
+    insert_deliveries_bulk,
+    # Deliveries
+    insert_delivery,
+    list_matches,
+    row_to_delivery_event,
+    update_match,
+    upsert_innings,
+    # Match players
+    upsert_match_players_bulk,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -1152,6 +1173,7 @@ async def api_generate_commentaries_audio(
     overs: str | None = None,
     commentary_id: int | None = None,
     language: str | None = None,
+    regenerate: bool = False,
 ):
     """
     Unified audio generation endpoint.
@@ -1165,6 +1187,8 @@ async def api_generate_commentaries_audio(
         innings is required when overs is provided.
       - **commentary_id** (no overs): generate audio for that single commentary (sync).
       - **language**: optional filter — only generate audio for this language.
+      - **regenerate**: if true, re-generate audio even when it already exists.
+        The old audio URL is preserved until the new file is ready (no null gap).
     """
     match = await get_match(match_id)
     if not match:
@@ -1186,7 +1210,7 @@ async def api_generate_commentaries_audio(
                 detail="Commentary has no text. Generate commentary text first.",
             )
 
-        result = await generate_commentary_audio(commentary_id)
+        result = await generate_commentary_audio(commentary_id, regenerate=regenerate)
         if result["status"] == "not_found":
             raise HTTPException(status_code=404, detail="Commentary not found")
         return result
@@ -1211,7 +1235,7 @@ async def api_generate_commentaries_audio(
         overs_0indexed = [o - 1 for o in overs_list]
 
         background_tasks.add_task(
-            generate_overs_audio, match_id, innings, overs_0indexed, language
+            generate_overs_audio, match_id, innings, overs_0indexed, language, regenerate
         )
 
         return {
@@ -1224,7 +1248,9 @@ async def api_generate_commentaries_audio(
         }
 
     # ── Case 3: All pending commentaries (background) ────────────
-    pending = await get_commentaries_pending_audio(match_id, language=language)
+    pending = await get_commentaries_pending_audio(
+        match_id, language=language, include_existing=regenerate
+    )
 
     if not pending:
         return {
@@ -1235,7 +1261,7 @@ async def api_generate_commentaries_audio(
             "message": "No commentaries pending audio generation",
         }
 
-    background_tasks.add_task(generate_match_audio, match_id, language)
+    background_tasks.add_task(generate_match_audio, match_id, language, regenerate)
 
     return {
         "match_id": match_id,

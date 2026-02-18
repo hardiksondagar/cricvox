@@ -1251,14 +1251,19 @@ async def get_commentary_by_id(commentary_id: int) -> dict | None:
 async def get_commentaries_pending_audio(
     match_id: int,
     language: str | None = None,
+    include_existing: bool = False,
 ) -> list[dict]:
     """
     Fetch commentaries that have text but no audio_url yet.
     Used by the audio generation pipeline to find work to do.
+
+    If include_existing=True, also returns rows that already have audio
+    (for regeneration).
     """
     db = _get_db()
+    audio_filter = "" if include_existing else "AND c.audio_url IS NULL"
     if language:
-        query = """
+        query = f"""
             SELECT c.*, b.innings as b_innings, b.ball_index as b_ball_index,
                    b.over as b_over, b.ball as b_ball,
                    b.batter as b_batter, b.bowler as b_bowler, b.non_batter as b_non_batter,
@@ -1273,12 +1278,12 @@ async def get_commentaries_pending_audio(
             LEFT JOIN deliveries b ON c.ball_id = b.id
             WHERE c.match_id = ? AND c.language = ?
               AND c.text IS NOT NULL AND c.text != ''
-              AND c.audio_url IS NULL
+              {audio_filter}
             ORDER BY c.seq, c.id
         """
         params: tuple = (match_id, language)
     else:
-        query = """
+        query = f"""
             SELECT c.*, b.innings as b_innings, b.ball_index as b_ball_index,
                    b.over as b_over, b.ball as b_ball,
                    b.batter as b_batter, b.bowler as b_bowler, b.non_batter as b_non_batter,
@@ -1293,7 +1298,7 @@ async def get_commentaries_pending_audio(
             LEFT JOIN deliveries b ON c.ball_id = b.id
             WHERE c.match_id = ? AND c.language IS NOT NULL
               AND c.text IS NOT NULL AND c.text != ''
-              AND c.audio_url IS NULL
+              {audio_filter}
             ORDER BY c.seq, c.id
         """
         params = (match_id,)
@@ -1329,16 +1334,21 @@ async def get_commentaries_pending_audio_by_ball_ids(
     match_id: int,
     ball_ids: list[int],
     language: str | None = None,
+    include_existing: bool = False,
 ) -> list[dict]:
     """
     Fetch commentaries that have text but no audio_url yet,
     filtered to specific ball (delivery) IDs.
     Used by overs-based audio generation.
+
+    If include_existing=True, also returns rows that already have audio
+    (for regeneration).
     """
     if not ball_ids:
         return []
     db = _get_db()
     placeholders = ",".join("?" * len(ball_ids))
+    audio_filter = "" if include_existing else "AND c.audio_url IS NULL"
     if language:
         query = f"""
             SELECT c.*, b.innings as b_innings, b.ball_index as b_ball_index,
@@ -1356,7 +1366,7 @@ async def get_commentaries_pending_audio_by_ball_ids(
             WHERE c.match_id = ? AND c.ball_id IN ({placeholders})
               AND c.language = ?
               AND c.text IS NOT NULL AND c.text != ''
-              AND c.audio_url IS NULL
+              {audio_filter}
             ORDER BY c.seq, c.id
         """
         params: list = [match_id] + ball_ids + [language]
@@ -1377,7 +1387,7 @@ async def get_commentaries_pending_audio_by_ball_ids(
             WHERE c.match_id = ? AND c.ball_id IN ({placeholders})
               AND c.language IS NOT NULL
               AND c.text IS NOT NULL AND c.text != ''
-              AND c.audio_url IS NULL
+              {audio_filter}
             ORDER BY c.seq, c.id
         """
         params = [match_id] + ball_ids

@@ -9,14 +9,30 @@ Providers:
   - "elevenlabs" → ElevenLabs eleven_v3
   - "sarvam"     → Sarvam AI Bulbul v3
   - "openai"     → OpenAI gpt-4o-mini-tts
+
+Concurrency is bounded by a shared asyncio.Semaphore so that callers can
+freely use asyncio.gather without overwhelming TTS provider rate limits.
 """
 
+import asyncio
 import importlib
 import logging
 
-from app.models import NarrativeBranch, SUPPORTED_LANGUAGES
+from app.config import settings
+from app.models import SUPPORTED_LANGUAGES, NarrativeBranch
 
 logger = logging.getLogger(__name__)
+
+_tts_semaphore: asyncio.Semaphore | None = None
+
+
+def _get_semaphore() -> asyncio.Semaphore:
+    """Lazy-init so the semaphore is created inside the running event loop."""
+    global _tts_semaphore
+    if _tts_semaphore is None:
+        _tts_semaphore = asyncio.Semaphore(settings.tts_max_concurrent)
+        logger.info(f"TTS concurrency limit set to {settings.tts_max_concurrent}")
+    return _tts_semaphore
 
 # Provider module registry
 _PROVIDER_MODULES: dict[str, str] = {
@@ -67,4 +83,5 @@ async def synthesize_speech(
     model_id = lang_cfg.get("tts_model", "")
 
     mod = _get_provider_module(vendor)
-    return await mod.synthesize(text, branch, is_pivot, language, voice_id, model_id)
+    async with _get_semaphore():
+        return await mod.synthesize(text, branch, is_pivot, language, voice_id, model_id)
