@@ -1,0 +1,35 @@
+# Example: stream multiple web pages to separate YouTube Live / RTMP endpoints.
+#
+# Usage:
+#   cd streaming
+#   docker compose up -d                  # start all streams
+#   docker compose logs -f stream-1       # tail one stream
+#   docker compose down                   # stop all
+#
+# Tip: Replace STREAM_URL / RTMP_URL with your actual values.
+#      The image is generic — any web page works, not just CricVox.
+
+services:
+  stream-1:
+    build: .
+    restart: unless-stopped
+    environment:
+      - STREAM_URL=http://host.docker.internal:8000/match/1?autoplay=true
+      - RTMP_URL=rtmp://a.rtmp.youtube.com/live2/YOUR_STREAM_KEY_1
+      - RESOLUTION=1920x1080
+      - FRAMERATE=30
+      - VIDEO_BITRATE=4500k
+      - AUDIO_BITRATE=128k
+
+  stream-2:
+    build: .
+    restart: unless-stopped
+    environment:
+      - STREAM_URL=http://host.docker.internal:8000/match/2?autoplay=true
+      - RTMP_URL=rtmp://a.rtmp.youtube.com/live2/YOUR_STREAM_KEY_2
+      - RESOLUTION=1920x1080
+      - FRAMERATE=30
+      - VIDEO_BITRATE=4500k
+      - AUDIO_BITRATE=128k
+
+  # Add more services as needed (stream-3, stream-4, stream-5, ...)

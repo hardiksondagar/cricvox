@@ -1,6 +1,7 @@
 // === Mode (static vs API) ===
 const isStaticMode = !!window.CRICVOX_STATIC;
 const BASE_PATH = window.CRICVOX_BASE_PATH || '';
+const autoPlay = new URLSearchParams(window.location.search).get('autoplay') === 'true';
 
 // === State ===
 let currentMatchId = null;
@@ -361,6 +362,7 @@ async function openMatch(matchId) {
 
             if (allCommentaries.length > 0) {
                 playbackIndex = 0;
+                if (autoPlay) resumePlayback();
             }
             updateTimelinePlayBtn();
         } else if (matchStatus === 'generated') {
@@ -370,6 +372,7 @@ async function openMatch(matchId) {
 
             if (allCommentaries.length > 0) {
                 playbackIndex = 0;
+                if (autoPlay) resumePlayback();
             }
             updateTimelinePlayBtn();
         } else {
